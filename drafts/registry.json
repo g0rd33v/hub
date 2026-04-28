@@ -1,0 +1,4 @@
+{
+  "_deprecated": "This file moved to drafts-registry.json on 2026-04-25 (v0.2.1). The new name describes the contents — it is the registry for the drafts protocol. Update any references.",
+  "redirect": "https://raw.githubusercontent.com/g0rd33v/drafts-protocol/main/drafts-registry.json"
+}

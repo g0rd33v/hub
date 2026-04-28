@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /folders/
+Allow: /
+Allow: /index.html
+Allow: /manifest.json
+Allow: /protocol.md
+Allow: /summary.txt
+Allow: /summary.json

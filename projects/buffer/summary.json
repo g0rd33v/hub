@@ -1,0 +1,17 @@
+{
+  "product": "buffer",
+  "one_line": "A small folder for moving things between websites.",
+  "url": "https://drafts.labs.vc/buffer/",
+  "verbs": [
+    "save here",
+    "read from here"
+  ],
+  "folders": {
+    "total": 10,
+    "open": 10,
+    "in_use": 0
+  },
+  "for_humans": "Open Claude in Chrome, paste this URL once, say 'save this here' on one site, 'read from the buffer' on another.",
+  "for_claude": "Read /buffer/manifest.json. Pick the first folder with status 'open'. Use the folder name as Bearer. Write under /buffer/folders/<name>/. After save, also write files.json, latest.txt, latest.html, summary.txt, state.json. Always /commit then /promote.",
+  "schema": "buffer.summary.v7"
+}

@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>wizapp answer up to thirty questions, ship a live project</title>
+<meta name="description" content="An Akinator-style wizard that turns vague intent into a build-ready, deploy-ready prompt. Pick interests, set languages, answer up to thirty questions, generate any time." />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000;color:#f5f5f5;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:#a8a8a8;text-decoration:underline rgba(255,255,255,.18);text-underline-offset:3px}
+  a:hover{color:#f5f5f5;text-decoration-color:rgba(255,255,255,.5)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:#f5f5f5}
+  .wrap{max-width:760px;margin:0 auto;padding:64px 28px 96px}
+  .eyebrow{display:flex;align-items:center;gap:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.16em;color:#a8a8a8;text-transform:uppercase;margin-bottom:28px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#ff6a3d;box-shadow:0 0 18px rgba(255,106,61,.55)}
+  h1{font-size:54px;line-height:1.05;letter-spacing:-.02em;font-weight:700;margin-bottom:18px}
+  h1 .accent{color:#ff6a3d}
+  .lede{color:#bdbdbd;font-size:17px;line-height:1.55;max-width:620px}
+  .rule{height:1px;background:rgba(255,255,255,.08);margin:44px 0}
+  h2{font-size:22px;letter-spacing:-.01em;font-weight:600;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+  h2 svg{opacity:.85}
+  h3{font-size:15px;font-weight:600;letter-spacing:.01em;margin-bottom:6px;color:#f5f5f5}
+  p{color:#cfcfcf}
+  .muted{color:#9b9b9b}
+  .grid-step{display:grid;grid-template-columns:42px 1fr;gap:18px;margin-bottom:22px;align-items:start}
+  .step-num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#ff6a3d;font-size:13px;padding-top:2px}
+  .meta-row{display:flex;align-items:center;gap:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9b9b9b;margin-bottom:14px;flex-wrap:wrap}
+  .meta-row .pcount{padding:2px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px}
+  .intro-title{font-family:Georgia,"Times New Roman",serif;font-size:30px;line-height:1.25;letter-spacing:-.01em;color:#f5f5f5;margin-bottom:8px}
+  .intro-hint{color:#9b9b9b;font-size:13.5px;margin-bottom:22px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .chip{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02);color:#e8e8e8;font-family:Inter,system-ui,sans-serif;font-size:13.5px;padding:9px 14px;border-radius:999px;cursor:pointer;transition:border-color .15s,background .15s,color .15s;display:inline-flex;align-items:center;gap:7px}
+  .chip:hover{border-color:rgba(255,106,61,.55);background:rgba(255,106,61,.06)}
+  .chip.on{border-color:#ff6a3d;background:rgba(255,106,61,.15);color:#fff}
+  .chip svg{opacity:.8}
+  .chip.disabled{opacity:.35;cursor:not-allowed}
+  .chip.disabled:hover{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
+  .chip.fixed{border-color:rgba(255,106,61,.45);background:rgba(255,106,61,.1);color:#fff;cursor:default}
+  .add-row{display:flex;gap:8px;margin-bottom:14px}
+  .add-row input{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);color:#f5f5f5;border-radius:10px;padding:11px 14px;font-family:inherit;font-size:14px;outline:none}
+  .add-row input:focus{border-color:rgba(255,106,61,.6)}
+  .add-row button{background:transparent;border:1px solid rgba(255,255,255,.14);color:#cfcfcf;padding:0 14px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+  .add-row button:hover{border-color:rgba(255,106,61,.6);color:#fff}
+  .wiz{margin-top:16px}
+  .progress{display:flex;align-items:center;gap:14px;margin-bottom:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#a8a8a8;letter-spacing:.08em}
+  .pbar{flex:1;height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+  .pbar > i{display:block;height:100%;background:#ff6a3d;width:0%;transition:width .35s ease}
+  .qcard{border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01));min-height:280px;display:flex;flex-direction:column;justify-content:space-between;transition:opacity .25s ease}
+  .qcard.fading{opacity:0}
+  .qmeta{display:flex;align-items:center;gap:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9b9b9b;margin-bottom:18px;flex-wrap:wrap}
+  .qmeta .tag{padding:2px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px}
+  .qtext{font-family:Georgia,"Times New Roman",serif;font-size:28px;line-height:1.25;letter-spacing:-.01em;color:#f5f5f5;margin-bottom:8px}
+  .qhint{color:#9b9b9b;font-size:13.5px;margin-bottom:24px}
+  .answers{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:10px}
+  .ans{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02);color:#f5f5f5;font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;padding:18px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s,transform .05s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .ans:hover{border-color:rgba(255,106,61,.65);background:rgba(255,106,61,.06)}
+  .ans:active{transform:translateY(1px)}
+  .ans.skip{color:#bdbdbd}
+  .ans svg{opacity:.85}
+  .ans.primary{background:#ff6a3d;border-color:#ff6a3d;color:#0d0d0d}
+  .ans.primary:hover{background:#ff7e57}
+  .ans[disabled]{opacity:.35;cursor:not-allowed}
+  .ctrls{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:12px;flex-wrap:wrap}
+  .ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:#cfcfcf;padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-family:inherit}
+  .ghost:hover{border-color:rgba(255,255,255,.28);color:#fff}
+  .ghost[disabled]{opacity:.35;cursor:not-allowed}
+  .gen{display:flex;align-items:center;gap:12px;color:#cfcfcf;padding:32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.04em}
+  .gen .spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.15);border-top-color:#ff6a3d;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .history{margin-top:8px}
+  .h-item{border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px 18px;background:rgba(255,255,255,.02);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;transition:border-color .15s, background .15s}
+  .h-item:hover{border-color:rgba(255,106,61,.35);background:rgba(255,106,61,.04)}
+  .h-main{flex:1;min-width:0}
+  .h-row1{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b9b9b}
+  .h-row1 .badge{padding:2px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px}
+  .h-row1 .badge.accent{border-color:rgba(255,106,61,.4);color:#ff9b7a}
+  .h-summary{color:#e8e8e8;font-size:14px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .h-actions{display:flex;gap:8px;flex-shrink:0}
+  .icon-btn{appearance:none;background:transparent;border:1px solid rgba(255,255,255,.14);color:#cfcfcf;padding:8px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+  .icon-btn:hover{border-color:rgba(255,106,61,.55);color:#fff;background:rgba(255,106,61,.06)}
+  .icon-btn.danger:hover{border-color:rgba(255,80,80,.6);color:#ffb0b0;background:rgba(255,80,80,.06)}
+  .empty{color:#9b9b9b;font-size:13.5px;border:1px dashed rgba(255,255,255,.1);border-radius:12px;padding:18px;text-align:center}
+  .lang-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid rgba(255,255,255,.14);border-radius:999px;font-size:13px;color:#e8e8e8;background:rgba(255,255,255,.03)}
+  .lang-pill.def{border-color:rgba(255,106,61,.5);color:#fff;background:rgba(255,106,61,.1)}
+  .lang-pill button{background:transparent;border:none;color:inherit;cursor:pointer;padding:0;display:inline-flex;align-items:center;opacity:.7}
+  .lang-pill button:hover{opacity:1}
+  .langs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .foot{margin-top:56px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);color:#9b9b9b;font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+  .hidden{display:none !important}
+  @media (max-width:560px){
+    .wrap{padding:40px 20px 80px}
+    h1{font-size:40px}
+    .qtext,.intro-title{font-size:22px}
+    .answers{grid-template-columns:1fr 1fr;gap:8px}
+    .qcard{padding:22px;min-height:0}
+  }
+  ::selection{background:rgba(255,106,61,.35);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow"><span class="dot"></span> WIZAPP &nbsp;&middot;&nbsp; PROJECT 06</div>
+
+  <h1>Up to thirty questions.<br/>Stop any time. Ship a <span class="accent">live project</span>.</h1>
+
+  <p class="lede">Pick three trending interests, set the languages, then answer up to thirty Yes/No/Skip questions. Hit <em>Generate</em> whenever you have enough signal &mdash; the prompt drops into your history, ready to paste into Claude.</p>
+
+  <div class="rule"></div>
+
+  <!-- STEP 0: INTERESTS -->
+  <div id="gate-int">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Pick three trending interests
+    </h2>
+    <div class="meta-row">
+      <span class="pcount" id="picked">0 / 3 picked</span>
+      <span>step 01 &middot; gravity</span>
+    </div>
+    <div class="intro-title">What's pulling at the culture right now?</div>
+    <div class="intro-hint">A short list of what people are actually obsessing over in 2026. Pick three &mdash; or add your own.</div>
+    <div class="chips" id="chips"></div>
+    <div class="add-row">
+      <input id="custom" type="text" placeholder="Add your own (e.g. longevity, mycology, formula 1)" maxlength="40" />
+      <button id="add">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add
+      </button>
+    </div>
+    <div class="ctrls">
+      <span class="muted" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;letter-spacing:.06em">interests become the gravitational pull of the prompt</span>
+      <button class="ans primary" id="next-int" disabled style="padding:10px 18px;border-radius:10px;font-size:14px">
+        Next: languages
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><polyline points="13 6 19 12 13 18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 0.5: LANGUAGES -->
+  <div id="gate-lang" class="hidden">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
+      Languages the project should support
+    </h2>
+    <div class="meta-row">
+      <span class="pcount" id="lcount">1 language</span>
+      <span>step 02 &middot; reach</span>
+    </div>
+    <div class="intro-title">Who reads this, in what tongue?</div>
+    <div class="intro-hint">English ships by default. Add any other languages &mdash; type the name and hit Enter. The prompt will instruct Claude to localize the live project into all of them.</div>
+    <div class="langs" id="langs"></div>
+    <div class="add-row">
+      <input id="lang-input" type="text" placeholder="Add a language (e.g. Spanish, Russian, Japanese, fr)" maxlength="40" />
+      <button id="lang-add">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add
+      </button>
+    </div>
+    <div class="ctrls">
+      <button class="ghost" id="back-int">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="ans primary" id="begin" style="padding:10px 18px;border-radius:10px;font-size:14px">
+        Begin the wizard
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><polyline points="13 6 19 12 13 18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- WIZARD -->
+  <div id="wiz" class="wiz hidden">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.6L20 9l-4 3.9.9 5.6L12 16l-4.9 2.5L8 12.9 4 9l5.6-1.4L12 2z"/></svg>
+      The wizard
+    </h2>
+    <div class="progress">
+      <span id="pcountW">01 / 30</span>
+      <div class="pbar"><i id="pbar"></i></div>
+      <span id="pphase" class="muted">classify</span>
+    </div>
+    <div class="qcard" id="qcard">
+      <div>
+        <div class="qmeta">
+          <span class="tag" id="qtag">product</span>
+          <span id="qphase">shape</span>
+          <span id="qrange" class="muted"></span>
+        </div>
+        <div class="qtext" id="qtext">&nbsp;</div>
+        <div class="qhint" id="qhint">&nbsp;</div>
+      </div>
+      <div class="answers">
+        <button class="ans" data-ans="yes" id="ans-yes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+          Yes
+        </button>
+        <button class="ans" data-ans="no" id="ans-no">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          No
+        </button>
+        <button class="ans skip" data-ans="skip" id="ans-skip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+          Skip
+        </button>
+        <button class="ans primary" id="ans-build" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 11 14 9 22 21 10 13 10 13 2"/></svg>
+          Generate
+        </button>
+      </div>
+    </div>
+    <div class="ctrls">
+      <button class="ghost" id="back" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <span class="muted" id="trail" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;letter-spacing:.06em"></span>
+      <button class="ghost" id="restart">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>
+        Restart
+      </button>
+    </div>
+    <p class="muted" style="margin-top:14px;font-size:13px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Generate is enabled after question 5. Anything unanswered becomes <code>let Claude decide</code>.</p>
+  </div>
+
+  <!-- GENERATING -->
+  <div id="gen-block" class="hidden" style="margin-top:32px">
+    <div class="gen"><span class="spin"></span> Composing your live-project prompt&hellip;</div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- HISTORY -->
+  <h2>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><circle cx="12" cy="12" r="3"/></svg>
+    Generation history
+  </h2>
+  <p class="muted" style="margin-bottom:14px">Saved locally in your browser. Each entry holds the full prompt, copyable in one click.</p>
+  <div class="history" id="history"></div>
+  <div class="ctrls" style="margin-top:8px">
+    <span class="muted" id="h-count" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;letter-spacing:.06em">0 prompts saved</span>
+    <button class="ghost" id="clear-hist">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      Clear history
+    </button>
+  </div>
+
+  <div class="rule"></div>
+
+  <h2>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+    How it works
+  </h2>
+  <div class="grid-step"><div class="step-num">00</div><div><h3>Gravity</h3><p class="muted">Three trending interests + the languages you want supported. They steer everything &mdash; concept, audience, voice, examples.</p></div></div>
+  <div class="grid-step"><div class="step-num">01</div><div><h3>Up to thirty taps</h3><p class="muted">Yes / No / Skip. Stop whenever you want by hitting <strong>Generate</strong> &mdash; available after question five. Skipped or unasked fields become <code>let Claude decide</code>.</p></div></div>
+  <div class="grid-step"><div class="step-num">02</div><div><h3>History, not popups</h3><p class="muted">Each generated prompt is saved into local storage as a one-line summary. Open it, copy the full prompt, drop it into Claude.</p></div></div>
+  <div class="grid-step"><div class="step-num">03</div><div><h3>Ship live</h3><p class="muted">The prompt explicitly tells Claude to upload, commit, and promote on drafts.labs.vc. The deliverable is a live URL.</p></div></div>
+
+  <div class="rule"></div>
+  <div class="foot">
+    <div>wizapp v0.3 &middot; client-side</div>
+    <div>built on <a href="https://drafts.labs.vc/wizapp/">drafts</a></div>
+  </div>
+
+</div>
+<script>
+(function(){
+  const QS = [{"id":"product","phase":"shape","text":"Is this something people will use, like an app or tool?","hint":"A product to interact with, or content to read?","map":{"yes":"app","no":"content","skip":"auto"}},{"id":"recurrence","phase":"shape","text":"Will people come back to it more than once?","hint":"Habit-forming or one-shot artifact?","map":{"yes":"recurring","no":"one_shot","skip":"auto"}},{"id":"audience","phase":"who","text":"Is this for a specific audience you know well?","hint":"Niche and named, or broad and general?","map":{"yes":"niche","no":"broad","skip":"auto"}},{"id":"monetization","phase":"why","text":"Does it need to make money directly?","hint":"Revenue product or free / brand-building?","map":{"yes":"paid","no":"free","skip":"auto"}},{"id":"tone","phase":"feel","text":"Should it feel premium and serious?","hint":"Refined and considered, or playful and raw?","map":{"yes":"premium","no":"playful","skip":"auto"}},{"id":"architecture","phase":"shape","text":"Will it stand alone, or live inside something bigger?","hint":"Standalone product, or sub-component?","map":{"yes":"standalone","no":"sub_component","skip":"auto"}},{"id":"ai_native","phase":"how","text":"Does the core idea need AI to work?","hint":"AI-native, or works without AI?","map":{"yes":"yes","no":"no","skip":"auto"}},{"id":"build_posture","phase":"posture","text":"Is speed-to-launch more important than polish?","hint":"Ship now and iterate, or polish before launch?","map":{"yes":"mvp","no":"polished","skip":"auto"}},{"id":"visual","phase":"feel","text":"Should the visual style be minimal and quiet?","hint":"Quiet and restrained, or bold and expressive?","map":{"yes":"minimal","no":"bold","skip":"auto"}},{"id":"ownership","phase":"voice","text":"Is this primarily yours, or made for someone else?","hint":"Your project, or for a client / audience?","map":{"yes":"self","no":"client","skip":"auto"}},{"id":"platform","phase":"shape","text":"Should this be primarily for mobile screens?","hint":"Mobile-first vs. desktop-first.","map":{"yes":"mobile","no":"desktop","skip":"auto"}},{"id":"offline","phase":"how","text":"Should it work offline or as a PWA?","hint":"Installable / offline, or pure web.","map":{"yes":"pwa","no":"web","skip":"auto"}},{"id":"auth","phase":"how","text":"Will it need user accounts?","hint":"Authenticated app, or fully public?","map":{"yes":"auth","no":"public","skip":"auto"}},{"id":"data","phase":"how","text":"Does it need to store user data?","hint":"Stateful (saved data) vs. stateless.","map":{"yes":"stateful","no":"stateless","skip":"auto"}},{"id":"realtime","phase":"how","text":"Should multiple people see updates in real time?","hint":"Realtime / collaborative vs. single-user.","map":{"yes":"realtime","no":"single","skip":"auto"}},{"id":"media","phase":"feel","text":"Should the page lean image- or media-heavy?","hint":"Visual-rich vs. text-first.","map":{"yes":"media_rich","no":"text_first","skip":"auto"}},{"id":"motion","phase":"feel","text":"Should it feel animated and alive?","hint":"Motion-forward vs. static and calm.","map":{"yes":"animated","no":"static","skip":"auto"}},{"id":"density","phase":"feel","text":"Should the layout feel dense and information-rich?","hint":"Dense (dashboards) vs. spacious (editorial).","map":{"yes":"dense","no":"spacious","skip":"auto"}},{"id":"darkmode","phase":"feel","text":"Should the default mode be dark?","hint":"Dark-first or light-first.","map":{"yes":"dark","no":"light","skip":"auto"}},{"id":"typography","phase":"feel","text":"Should typography do the heavy lifting?","hint":"Type-driven vs. icon/illustration-driven.","map":{"yes":"type_driven","no":"illustration","skip":"auto"}},{"id":"distribution","phase":"reach","text":"Should it be shareable as a single link?","hint":"Link-first / viral vs. closed / private.","map":{"yes":"link_first","no":"private","skip":"auto"}},{"id":"community","phase":"reach","text":"Will users interact with each other?","hint":"Social / community vs. solo product.","map":{"yes":"social","no":"solo","skip":"auto"}},{"id":"telegram","phase":"reach","text":"Should it ship a Telegram bot alongside the web app?","hint":"Bot-extended vs. web-only.","map":{"yes":"telegram","no":"web_only","skip":"auto"}},{"id":"open_source","phase":"posture","text":"Should it be open source?","hint":"Open source vs. closed.","map":{"yes":"open","no":"closed","skip":"auto"}},{"id":"tracking","phase":"posture","text":"Should it ship with analytics from day one?","hint":"Tracked / measured vs. analytics-free.","map":{"yes":"tracked","no":"no_tracking","skip":"auto"}},{"id":"accessibility","phase":"posture","text":"Is accessibility (WCAG) a first-class concern?","hint":"A11y-first vs. baseline only.","map":{"yes":"a11y_first","no":"baseline","skip":"auto"}},{"id":"humor","phase":"voice","text":"Should the copy have humor and personality?","hint":"Witty / personable vs. neutral / professional.","map":{"yes":"witty","no":"neutral","skip":"auto"}},{"id":"urgency","phase":"voice","text":"Should the copy feel urgent and direct?","hint":"Urgent / sharp vs. calm / measured.","map":{"yes":"urgent","no":"calm","skip":"auto"}},{"id":"ambition","phase":"posture","text":"Should this aim to be a long-term product, not a weekend toy?","hint":"Ambitious / multi-year vs. weekend artifact.","map":{"yes":"long_term","no":"weekend","skip":"auto"}},{"id":"novelty","phase":"posture","text":"Should the core idea feel genuinely novel, not a remix?","hint":"Novel / boundary-pushing vs. proven / familiar.","map":{"yes":"novel","no":"familiar","skip":"auto"}}];
+  const TRENDING = ["AI agents","vibe coding","longevity","crypto","ai art","climate tech","creator economy","no-code","indie hacking","formula 1","space","mental health","fitness","minimalism","privacy","open source","remote work","solo travel","productivity","design systems","startups","self-hosting"];
+  const HKEY = "wizapp.history.v1";
+  const $ = id => document.getElementById(id);
+  let chosen = [];
+  let langs = ["English"];
+  let answers = {};
+  let idx = 0;
+  function renderChips(){
+    const host = $("chips"); host.innerHTML = "";
+    const all = [...TRENDING];
+    for(const c of chosen){ if(!all.includes(c)) all.push(c); }
+    all.forEach(label => {
+      const on = chosen.includes(label);
+      const b = document.createElement("button");
+      b.className = "chip" + (on?" on":"") + ((!on && chosen.length>=3) ? " disabled":"");
+      b.type = "button";
+      const iconOn = "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"4 12 10 18 20 6\"/></svg>";
+      const iconOff = "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/></svg>";
+      b.innerHTML = (on ? iconOn : iconOff) + " " + label;
+      b.addEventListener("click", () => toggle(label));
+      host.appendChild(b);
+    });
+    $("picked").textContent = chosen.length + " / 3 picked";
+    $("next-int").disabled = chosen.length !== 3;
+  }
+  function toggle(label){
+    const i = chosen.indexOf(label);
+    if(i >= 0) chosen.splice(i,1);
+    else if(chosen.length < 3) chosen.push(label);
+    renderChips();
+  }
+  $("add").addEventListener("click", () => {
+    const v = $("custom").value.trim();
+    if(!v) return;
+    if(chosen.length >= 3 && !chosen.includes(v)) return;
+    if(!chosen.includes(v)) chosen.push(v);
+    $("custom").value = "";
+    renderChips();
+  });
+  $("custom").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("add").click(); }});
+  $("next-int").addEventListener("click", () => {
+    if(chosen.length === 3){
+      $("gate-int").classList.add("hidden");
+      $("gate-lang").classList.remove("hidden");
+      renderLangs();
+      window.scrollTo({top: 0, behavior:"smooth"});
+    }
+  });
+  function renderLangs(){
+    const host = $("langs"); host.innerHTML = "";
+    langs.forEach((l, i) => {
+      const div = document.createElement("span");
+      div.className = "lang-pill" + (i === 0 ? " def" : "");
+      const safe = l.replace(/[<>]/g,"");
+      div.innerHTML = "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M2 12h20\"/><path d=\"M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z\"/></svg> " + safe;
+      if(i !== 0){
+        const x = document.createElement("button");
+        x.type = "button";
+        x.innerHTML = "<svg width=\"11\" height=\"11\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/></svg>";
+        x.addEventListener("click", () => { langs.splice(i,1); renderLangs(); });
+        div.appendChild(x);
+      }
+      host.appendChild(div);
+    });
+    $("lcount").textContent = langs.length + (langs.length === 1 ? " language" : " languages");
+  }
+  $("lang-add").addEventListener("click", () => {
+    const v = $("lang-input").value.trim();
+    if(!v) return;
+    if(!langs.map(l=>l.toLowerCase()).includes(v.toLowerCase())) langs.push(v);
+    $("lang-input").value = "";
+    renderLangs();
+  });
+  $("lang-input").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("lang-add").click(); }});
+  $("back-int").addEventListener("click", () => {
+    $("gate-lang").classList.add("hidden");
+    $("gate-int").classList.remove("hidden");
+    window.scrollTo({top: 0, behavior:"smooth"});
+  });
+  $("begin").addEventListener("click", () => {
+    $("gate-lang").classList.add("hidden");
+    $("wiz").classList.remove("hidden");
+    idx = 0; answers = {};
+    render();
+    window.scrollTo({top: 0, behavior:"smooth"});
+  });
+  function setProgress(){
+    const n = idx + 1;
+    $("pcountW").textContent = String(n).padStart(2,"0") + " / 30";
+    $("pbar").style.width = ((idx)/30*100) + "%";
+    $("pphase").textContent = QS[idx].phase;
+    $("qrange").textContent = "\u00b7 generate available after q5";
+    $("ans-build").disabled = (n < 6);
+  }
+  function render(){
+    setProgress();
+    const q = QS[idx];
+    const card = $("qcard");
+    card.classList.add("fading");
+    setTimeout(()=>{
+      $("qtag").textContent = q.id.replace(/_/g," ");
+      $("qphase").textContent = q.phase;
+      $("qtext").textContent = q.text;
+      $("qhint").textContent = q.hint;
+      $("back").disabled = idx === 0;
+      const trail = QS.slice(0, idx).map(qq => { const a = answers[qq.id]; return a ? a.raw[0].toUpperCase() : "\u2022"; }).join(" ");
+      $("trail").textContent = trail;
+      card.classList.remove("fading");
+    }, 160);
+  }
+  function answer(raw){
+    const q = QS[idx];
+    answers[q.id] = {val: q.map[raw], raw: raw};
+    if(idx < QS.length - 1){ idx++; render(); }
+    else { $("pbar").style.width = "100%"; $("pcountW").textContent = "30 / 30"; finish(); }
+  }
+  function back(){ if(idx === 0) return; idx--; delete answers[QS[idx].id]; render(); }
+  function restart(){
+    idx = 0; answers = {}; chosen = []; langs = ["English"];
+    $("wiz").classList.add("hidden");
+    $("gen-block").classList.add("hidden");
+    $("gate-lang").classList.add("hidden");
+    $("gate-int").classList.remove("hidden");
+    $("custom").value = "";
+    $("lang-input").value = "";
+    renderChips();
+    window.scrollTo({top: 0, behavior:"smooth"});
+  }
+  function profileObj(){ const p = {}; QS.forEach(q => { p[q.id] = (answers[q.id] && answers[q.id].val) || "auto"; }); return p; }
+  function compose(p){
+    const v = (k) => p[k];
+    const fmt = (k, mapping) => {
+      const x = v(k);
+      if(x === "auto") return "let Claude decide";
+      return mapping ? (mapping[x] || x.replace(/_/g," ")) : x.replace(/_/g," ");
+    };
+    let ptype;
+    if(v("product") === "auto") ptype = "a project (let Claude decide whether app, site, or document set)";
+    else if(v("product") === "app") ptype = (v("recurrence") === "one_shot") ? "a single-use web tool" : "a web app";
+    else ptype = (v("recurrence") === "recurring") ? "a content-driven site (multi-page, returnable)" : "a one-shot landing page or document";
+    if(v("architecture") === "sub_component") ptype += ", designed to live inside a larger product";
+    else if(v("architecture") === "standalone") ptype += ", standing alone";
+    const lines = [];
+    lines.push("Project type: " + ptype + ".");
+    lines.push("Target audience: " + fmt("audience", {niche:"a specific, well-known niche audience", broad:"a broad, general audience"}) + ".");
+    lines.push("Business model: " + fmt("monetization", {paid:"monetized directly (charges users / customers)", free:"free, brand-building, no direct revenue"}) + ".");
+    lines.push("Brand tone: " + fmt("tone", {premium:"premium and serious", playful:"playful and raw"}) + " and " + fmt("visual", {minimal:"minimal and quiet", bold:"bold and expressive"}) + ".");
+    lines.push("AI posture: " + fmt("ai_native", {yes:"AI-native (the idea fails without AI in the loop)", no:"AI-optional (works without AI; may still use it as polish)"}) + ".");
+    lines.push("Build posture: " + fmt("build_posture", {mvp:"ship-now, iterate-later (MVP velocity over polish)", polished:"polish-first (craft over speed)"}) + ".");
+    lines.push("Ownership voice: " + fmt("ownership", {self:"first-person, this is mine / my brand", client:"third-person, made for a client or audience"}) + ".");
+    lines.push("Platform: " + fmt("platform", {mobile:"mobile-first", desktop:"desktop-first"}) + ".");
+    lines.push("Delivery: " + fmt("offline", {pwa:"installable PWA / works offline", web:"pure web, no offline"}) + ".");
+    lines.push("Auth: " + fmt("auth", {auth:"requires user accounts", "public":"fully public, no accounts"}) + ".");
+    lines.push("State: " + fmt("data", {stateful:"stateful (stores user data)", stateless:"stateless (no persistence)"}) + ".");
+    lines.push("Realtime: " + fmt("realtime", {realtime:"realtime / collaborative", single:"single-user"}) + ".");
+    lines.push("Media: " + fmt("media", {media_rich:"image- and media-rich", text_first:"text-first"}) + ".");
+    lines.push("Motion: " + fmt("motion", {animated:"animated and alive", "static":"static and calm"}) + ".");
+    lines.push("Density: " + fmt("density", {dense:"dense, information-rich layout", spacious:"spacious, editorial layout"}) + ".");
+    lines.push("Default mode: " + fmt("darkmode", {dark:"dark-first", light:"light-first"}) + ".");
+    lines.push("Typographic posture: " + fmt("typography", {type_driven:"type-driven", illustration:"icon / illustration-driven"}) + ".");
+    lines.push("Distribution: " + fmt("distribution", {link_first:"link-first / shareable", "private":"closed / private"}) + ".");
+    lines.push("Community: " + fmt("community", {social:"social / community", solo:"solo product"}) + ".");
+    lines.push("Telegram: " + fmt("telegram", {telegram:"ship a Telegram bot via drafts bot.json alongside the web app", web_only:"web only, no bot"}) + ".");
+    lines.push("License: " + fmt("open_source", {open:"open source", closed:"closed source"}) + ".");
+    lines.push("Analytics: " + fmt("tracking", {tracked:"analytics from day one", no_tracking:"no analytics, privacy-first"}) + ".");
+    lines.push("Accessibility: " + fmt("accessibility", {a11y_first:"a11y-first (WCAG-aware)", baseline:"baseline accessibility"}) + ".");
+    lines.push("Copy humor: " + fmt("humor", {witty:"witty and personable", neutral:"neutral and professional"}) + ".");
+    lines.push("Copy urgency: " + fmt("urgency", {urgent:"urgent and sharp", calm:"calm and measured"}) + ".");
+    lines.push("Ambition: " + fmt("ambition", {long_term:"long-term product, multi-year arc", weekend:"weekend artifact"}) + ".");
+    lines.push("Novelty: " + fmt("novelty", {novel:"genuinely novel, boundary-pushing", familiar:"proven, familiar, well-trodden"}) + ".");
+    const interestsLine = chosen.join(", ");
+    const langsLine = langs.join(", ");
+    const deliv = [];
+    deliv.push("A live, working project deployed on drafts.labs.vc, served at the project\u0027s live URL (not a sketch, not a mock).");
+    deliv.push("A self-contained index.html (or small file set) implementing the core interaction end-to-end.");
+    deliv.push("Full localization for: " + langsLine + ". Either a language switcher in the UI or separate routes \u2014 your call.");
+    deliv.push("A spec.md describing scope, audience, success metric, and the v0 cut.");
+    deliv.push("A README.md with the one-liner, the live URL, and how to evolve the project.");
+    if(v("telegram") === "telegram") deliv.push("A bot.json at project root so drafts can attach a Telegram bot. Include /start with a WebApp button to the live URL.");
+    if(v("monetization") === "paid") deliv.push("A pricing one-pager with at least two tiers and rationale.");
+    if(v("ai_native") === "yes") deliv.push("A prompt set or model-call sketch showing how the AI loop works.");
+    if(v("open_source") === "open") deliv.push("A LICENSE (MIT) and a CONTRIBUTING.md.");
+    const cons = [];
+    cons.push("Build posture: " + fmt("build_posture", {mvp:"ship-now, iterate-later", polished:"polish-first"}) + ".");
+    cons.push("Visual style: " + fmt("visual", {minimal:"minimal and quiet", bold:"bold and expressive"}) + ". Default mode: " + fmt("darkmode", {dark:"dark", light:"light"}) + ".");
+    cons.push("No frameworks unless required. Prefer one HTML file. " + (v("platform") === "mobile" ? "Mobile-first." : v("platform") === "desktop" ? "Desktop-first." : "Mobile-first by default."));
+    cons.push("The three interests must visibly shape the project \u2014 in concept, copy, examples, and tone \u2014 not just be name-dropped.");
+    if(v("accessibility") === "a11y_first") cons.push("Accessibility is a first-class concern: semantic HTML, focus states, color contrast, keyboard navigation.");
+    if(v("tracking") === "no_tracking") cons.push("No analytics, no third-party trackers, no fingerprinting.");
+    const autosCount = QS.filter(q => p[q.id] === "auto").length;
+    const prompt = "I want you to ship a LIVE project, not a sketch.\n\n"
+      + "My three interests (the gravity of this build): " + interestsLine + ".\n"
+      + "Languages the project must support: " + langsLine + ".\n"
+      + "Let these interests define the vector of the entire project \u2014 the concept, the audience, the examples, the voice. The output should sit at the intersection of these three.\n\n"
+      + lines.join("\n") + "\n\n"
+      + "Please produce:\n" + deliv.map(d => "  - " + d).join("\n") + "\n\n"
+      + "Constraints:\n" + cons.map(c => "  - " + c).join("\n") + "\n\n"
+      + "AUTONOMY: do not ask me anything. Choose everything yourself \u2014 name, scope, copy, layout, palette, all unspecified details. Where any field above says \u201Clet Claude decide\u201D (" + autosCount + " fields), make a deliberate choice and justify it in one short line at the top of your output.\n\n"
+      + "DEPLOYMENT (mandatory): the deliverable is a LIVE PROJECT on drafts.labs.vc. Use the drafts protocol on the project URL I provide alongside this prompt: POST /drafts/upload (filename + content) for each file, then POST /drafts/commit (message), then POST /drafts/promote. The final answer to me must include the live URL where the project is reachable, and a one-paragraph description of what shipped.\n\n"
+      + "Begin by restating the project in one sentence, then ship.";
+    return {prompt, autosCount};
+  }
+  function summary(p){
+    const v = k => p[k];
+    let kind;
+    if(v("product") === "auto") kind = "project";
+    else if(v("product") === "app") kind = (v("recurrence") === "one_shot") ? "web tool" : "web app";
+    else kind = (v("recurrence") === "recurring") ? "content site" : "landing page";
+    const adjs = [];
+    if(v("tone") === "premium") adjs.push("premium");
+    if(v("tone") === "playful") adjs.push("playful");
+    if(v("visual") === "minimal") adjs.push("minimal");
+    if(v("visual") === "bold") adjs.push("bold");
+    if(v("ai_native") === "yes") adjs.push("AI-native");
+    return (adjs.length ? adjs.join(", ") + " " : "") + kind + " for " + chosen.join(" \u00d7 ");
+  }
+  function loadHist(){ try { return JSON.parse(localStorage.getItem(HKEY) || "[]"); } catch(e){ return []; } }
+  function saveHist(h){ try { localStorage.setItem(HKEY, JSON.stringify(h)); } catch(e){} }
+  function pushHist(entry){ const h = loadHist(); h.unshift(entry); if(h.length > 50) h.length = 50; saveHist(h); renderHist(); }
+  function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function renderHist(){
+    const h = loadHist();
+    const host = $("history"); host.innerHTML = "";
+    $("h-count").textContent = h.length + " prompt" + (h.length === 1 ? "" : "s") + " saved";
+    if(!h.length){
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No prompts yet. Run the wizard and hit Generate.";
+      host.appendChild(empty); return;
+    }
+    h.forEach((e, i) => {
+      const item = document.createElement("div");
+      item.className = "h-item";
+      const date = new Date(e.ts).toLocaleString();
+      const interestsTxt = (e.interests || []).join(" \u00b7 ");
+      const langsTxt = (e.langs || []).join(", ");
+      item.innerHTML = "<div class=\"h-main\">"
+        + "<div class=\"h-row1\">"
+        + "<span class=\"badge accent\">" + (e.askedCount || 0) + "/30</span>"
+        + "<span class=\"badge\">" + escHtml(interestsTxt) + "</span>"
+        + "<span class=\"badge\">" + escHtml(langsTxt) + "</span>"
+        + "<span>" + date + "</span>"
+        + "</div>"
+        + "<div class=\"h-summary\">" + escHtml(e.summary || "") + "</div>"
+        + "</div>"
+        + "<div class=\"h-actions\">"
+        + "<button class=\"icon-btn\" data-act=\"copy\" data-i=\"" + i + "\">"
+        + "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"11\" height=\"11\" rx=\"2\"/><path d=\"M5 15V5a2 2 0 0 1 2-2h10\"/></svg>"
+        + "Copy</button>"
+        + "<button class=\"icon-btn\" data-act=\"view\" data-i=\"" + i + "\">"
+        + "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>"
+        + "View</button>"
+        + "<button class=\"icon-btn danger\" data-act=\"del\" data-i=\"" + i + "\">"
+        + "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"3 6 5 6 21 6\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/></svg>"
+        + "</button>"
+        + "</div>";
+      host.appendChild(item);
+    });
+    host.querySelectorAll("button[data-act]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const act = btn.dataset.act;
+        const i = parseInt(btn.dataset.i, 10);
+        const h2 = loadHist();
+        const e = h2[i]; if(!e) return;
+        if(act === "copy"){
+          navigator.clipboard.writeText(e.prompt).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"4 12 10 18 20 6\"/></svg> Copied";
+            setTimeout(() => btn.innerHTML = orig, 1400);
+          });
+        } else if(act === "view"){
+          const w = window.open("", "_blank");
+          if(w){
+            w.document.write("<title>wizapp prompt</title><pre style=\"font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#0a0a0a;color:#f5f5f5;padding:32px;white-space:pre-wrap;line-height:1.6;margin:0;min-height:100vh\"></pre>");
+            w.document.querySelector("pre").textContent = e.prompt;
+          }
+        } else if(act === "del"){
+          h2.splice(i,1); saveHist(h2); renderHist();
+        }
+      });
+    });
+  }
+  $("clear-hist").addEventListener("click", () => {
+    if(confirm("Clear all saved prompts?")){ saveHist([]); renderHist(); }
+  });
+  function finish(){
+    $("wiz").classList.add("hidden");
+    $("gen-block").classList.remove("hidden");
+    setTimeout(() => {
+      const p = profileObj();
+      const askedCount = Object.keys(answers).length;
+      const out = compose(p);
+      pushHist({ ts: Date.now(), interests: [...chosen], langs: [...langs], askedCount, autos: out.autosCount, summary: summary(p), prompt: out.prompt, profile: p });
+      $("gen-block").classList.add("hidden");
+      restart();
+      document.getElementById("history").scrollIntoView({behavior:"smooth", block:"start"});
+    }, 1100);
+  }
+  document.querySelectorAll("button[data-ans]").forEach(b => b.addEventListener("click", () => {
+    if($("wiz").classList.contains("hidden")) return;
+    answer(b.dataset.ans);
+  }));
+  $("ans-build").addEventListener("click", () => {
+    if($("wiz").classList.contains("hidden")) return;
+    if($("ans-build").disabled) return;
+    finish();
+  });
+  $("back").addEventListener("click", back);
+  $("restart").addEventListener("click", restart);
+  document.addEventListener("keydown", (e) => {
+    if(!$("wiz").classList.contains("hidden")){
+      if(e.key === "1" || e.key.toLowerCase() === "y") answer("yes");
+      else if(e.key === "2" || e.key.toLowerCase() === "n") answer("no");
+      else if(e.key === "3" || e.key.toLowerCase() === "s") answer("skip");
+      else if((e.key === "4" || e.key.toLowerCase() === "g") && !$("ans-build").disabled) finish();
+      else if(e.key === "Backspace" || e.key === "ArrowLeft") back();
+    }
+  });
+  renderChips(); renderLangs(); renderHist();
+})();
+</script>
+</body>
+</html>

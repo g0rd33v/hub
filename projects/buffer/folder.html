@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light dark">
+<title>buffer folder</title>
+<style>
+  :root{color-scheme:light dark}
+  body{font:15px -apple-system,sans-serif;color:#161616;background:#fafaf7;display:grid;place-items:center;height:100vh;margin:0}
+  a{color:#ff5e1f}
+  @media (prefers-color-scheme: dark){
+    body{color:#f1efe9;background:#0e0e0d}
+    a{color:#ff7a45}
+  }
+</style>
+</head><body>
+<script>
+  var p = new URLSearchParams(location.search).get('f') || '';
+  if (/^[a-z0-9]{10}$/.test(p)) { location.replace('./folders/' + p + '/'); }
+  else { document.body.textContent = 'folder name must be 10 lowercase letters or digits'; }
+</script>
+<noscript>Open <code>/buffer/folders/&lt;name&gt;/</code> directly.</noscript>
+</body></html>
