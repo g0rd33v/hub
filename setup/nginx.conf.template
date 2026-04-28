@@ -3,9 +3,12 @@ server {
     listen [::]:80;
     server_name {{DOMAIN}};
 
-    # certbot will inject https block on 443 and switch this to a 301
+    # Increase max body size for file uploads to drafts
+    client_max_body_size 100M;
+
+    # Proxy everything to drafts
     location / {
-        proxy_pass http://127.0.0.1:3100;
+        proxy_pass http://127.0.0.1:{{DRAFTS_PORT}};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -13,7 +16,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_read_timeout 90s;
-        client_max_body_size 25m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 }

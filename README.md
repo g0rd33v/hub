@@ -1,74 +1,106 @@
-# hub
+# Hub
 
-The workspace where four products evolve together as one stack: drafts, telepath, wizapp, buffer.
+Single workspace where the Labs server stack is developed end-to-end.
 
-This is the upstream. drafts.labs.vc and the projects running on it pull from here. Production servers do not edit themselves — they consume what hub publishes.
+Drafts protocol, Telepath master bot, the wizapp and buffer projects, and the
+new-server bootstrap all live here together. They are tested as one set,
+released as one set, and propagated downstream from here.
 
----
+This repo is the upstream. Production servers (`drafts.labs.vc`, future
+`drafts2.labs.vc`, ...) pull from hub. Hub does not pull from them.
 
-## What lives here
+## Layout
 
-| Path | What | Upstream of |
-|---|---|---|
-| `drafts/` | Drafts protocol + runtime + telepath bot. Single Node process. | `/opt/drafts` on every drafts server |
-| `projects/wizapp/` | Wizapp — Akinator-style wizard that turns vague intent into a build-ready prompt | `/var/lib/drafts/wizapp/live/` |
-| `projects/buffer/` | Buffer — 10-folder workspace cache for AI sessions (folder name = address = write key) | `/var/lib/drafts/buffer/live/` |
-| `setup/` | Everything needed to bring a fresh Ubuntu box from zero to a fully running drafts server | new servers |
-
-drafts and telepath share one repo because they share one Node process. wizapp and buffer are static drafts-projects (HTML + manifest), they live as files inside the drafts runtime.
-
----
-
-## Bringing up a new server
-
-Provision a fresh Ubuntu 24.04 box, get root, then:
-
-```bash
-git clone https://github.com/g0rd33v/hub.git
-cd hub/setup
-cp env.example .env
-# edit .env: set SERVER_NUMBER, TG_BOT_TOKEN, CF_API_TOKEN, CF_ZONE_ID
-sudo ./install.sh
+```
+hub/
+├── drafts/            drafts protocol server + telepath master bot
+│   ├── drafts.js          main HTTP server (projects, runtime, registry, AAP/PAP/SAP)
+│   ├── telepath.js        Telegram master bot ("@drafts_bot" style)
+│   ├── runtime.js         per-project runtime engine (bot.js + cron.json)
+│   ├── analytics.js       webhook + bot analytics
+│   ├── project-bots.js    per-project bot wiring
+│   ├── rich-context.js    context builder
+│   ├── app.js             entry point that wires all of the above
+│   ├── package.json
+│   └── ... (deploy/, docs/, scripts/, static/, README, CHANGELOG)
+│
+├── projects/          projects that ship with every new server
+│   ├── wizapp/            Akinator-style wizard → build-ready prompt
+│   └── buffer/            AI-session workspace cache
+│
+├── setup/             new-server bootstrap (max automation)
+│   ├── install.sh         one-shot: Node + pm2 + nginx + Cloudflare DNS + Let's Encrypt + Cockpit
+│   ├── auto-update.sh     cron job that pulls hub and redeploys drafts
+│   ├── nginx.conf.template
+│   └── .env.example
+│
+└── README.md          this file
 ```
 
-`install.sh` does, in order:
+## How a new server gets born
 
-1. Installs Node 20, pm2, nginx, certbot, cockpit, git
-2. Clones the hub repo into `/opt/hub`
-3. Copies `hub/drafts/` → `/opt/drafts/`, runs `npm ci`
-4. Copies `hub/projects/wizapp/` and `hub/projects/buffer/` to `/var/lib/drafts/<project>/live/`
-5. Calls Cloudflare API to create A record `drafts<N>.labs.vc` → server IP
-6. Issues Let's Encrypt cert via certbot --nginx
-7. Renders nginx.conf from template, restarts nginx
-8. Installs cockpit, opens port 9090
-9. Registers drafts process with pm2, saves pm2 startup
-10. Prints SAP-pass URL — copy it, send `/start` to your master Telegram bot, paste it in.
+Server N (numeric) gets the domain `draftsN.labs.vc` automatically.
+Prerequisites: a fresh Ubuntu 24.04 box with public IP and root SSH.
 
-Total time on a fresh DigitalOcean droplet: about 8-10 minutes.
+```bash
+# on the new box, as root:
+git clone https://github.com/g0rd33v/hub /opt/hub
+cd /opt/hub/setup
+cp .env.example .env
+# edit .env: set SERVER_NUMBER, PUBLIC_BASE, TG_BOT_TOKEN, optionally CF_*
+bash install.sh
+```
 
----
+In ~10 minutes you have:
 
-## Working in hub
+- `https://draftsN.labs.vc` serving drafts (Let's Encrypt)
+- `https://draftsN.labs.vc:9090` Cockpit admin UI
+- pm2 + systemd ensuring drafts restarts on reboot
+- cron (`/etc/cron.d/drafts-autoupdate`) pulling hub every 15 min and redeploying drafts on change
+- a generated SAP token in `/etc/labs/drafts.sap` for the master bot
+- the master Telegram bot polling for updates
 
-Hub is the place where these four products are improved together. Workflow:
+Cloudflare DNS is automated when `CF_API_TOKEN` + `CF_ZONE_ID` are set.
+Without them, `install.sh` prints the IP it expects and you set the A record by hand.
 
-1. Make changes in the relevant subdirectory of hub
-2. Test locally or on a sandbox server
-3. Commit and push to hub `main`
-4. Production servers pull from hub on next auto-update cycle (or manually `cd /opt/drafts && git pull && pm2 restart drafts`)
+## Develop here, propagate downstream
 
-Do not edit production directly. Hub is the source of truth.
+The intended flow is:
 
----
+1. Open this repo on your laptop or on any server that has it cloned.
+2. Edit `drafts/`, `projects/`, or `setup/` as a coherent set.
+3. Push to `main`.
+4. Within 15 min every server running this hub picks up the change automatically
+   (drafts/ changes trigger pm2 restart; projects/ changes do not — they are
+   imported into a server's drafts state by the operator on demand).
 
-## Why this exists
+## What lives here vs what doesn't
 
-Before hub, each product had its own life. Drafts was in `drafts-protocol`, wizapp and buffer were just project folders sitting on a server, telepath was bundled inside drafts, the setup steps were scattered across notes and one-off scripts.
+In hub:
 
-Hub exists so the four can be developed as a coordinated whole, smoke-tested as a kit, then propagated back out in lockstep. One repo, one PR, one commit can change all of them at once.
+- The drafts server source code (the runtime engine for the protocol)
+- Telepath — the master bot that operates a single drafts server
+- wizapp + buffer — projects considered part of the standard distribution
+- Setup automation for new servers
 
----
+Not in hub:
+
+- Per-project runtime data (lives in `/var/lib/drafts/<project>/` on each server)
+- Server-specific secrets (SAP tokens, bot tokens — generated/configured per server, never committed)
+- User-created projects (those live on the servers and are managed via the master bot)
+
+## Status
+
+| Component   | Source of truth | Production       |
+| ----------- | --------------- | ---------------- |
+| drafts      | `hub/drafts/`   | drafts.labs.vc   |
+| telepath    | `hub/drafts/telepath.js` | drafts.labs.vc |
+| wizapp      | `hub/projects/wizapp/` | drafts.labs.vc |
+| buffer      | `hub/projects/buffer/` | drafts.labs.vc |
+| setup       | `hub/setup/`    | new servers      |
+
+Server 1 = `drafts.labs.vc` (live, v1.0). Server 2 = `drafts2.labs.vc` (in provisioning).
 
 ## License
 
-MIT. See LICENSE.
+MIT. See `drafts/LICENSE` for the drafts protocol license; same applies to hub as a whole.
