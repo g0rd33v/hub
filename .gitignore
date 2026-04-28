@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+*.env.local
+
+# Backups (we keep .bak files only locally during patching, never in repo)
+*.bak
+*.bak.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Drafts runtime data (lives on servers, not in hub)
+/var/lib/drafts/
+/etc/labs/
+
+# Cert / TLS
+*.pem
+*.key
+
+# Local dev artefacts
+/tmp/
+*.log
