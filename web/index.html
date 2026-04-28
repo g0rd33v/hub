@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hub by Labs — Connect everything. Manage from chat. Free.</title>
+<meta name="description" content="Hub by Labs: connect your bot, channel, site, app, ChatGPT, Claude, Grok, APIs — all in one place. Manage everything from chat. Free.">
+<meta property="og:title" content="Hub by Labs">
+<meta property="og:description" content="Connect everything. Manage from chat. Free.">
+<meta property="og:url" content="https://hub.labs.co">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #000000;
+  --card: #0d0d0d;
+  --card-hi: #141414;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hi: rgba(255, 255, 255, 0.15);
+  --text: #ffffff;
+  --text-dim: #888888;
+  --text-faint: #555555;
+  --tg-blue: #229ED9;
+  --tg-blue-hover: #27A7E7;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body { min-height: 100vh; overflow-x: hidden; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.serif { font-family: 'Source Serif Pro', Georgia, serif; }
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.container-narrow {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+code, .ic {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+mark, .hl {
+  background: transparent;
+  color: var(--text);
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+  padding-bottom: 1px;
+  font-weight: 500;
+}
+em.term {
+  font-style: italic;
+  font-family: 'Source Serif Pro', serif;
+  color: var(--text);
+}
+nav {
+  padding: 28px 0;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 100;
+}
+.nav-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.logo .bracket { color: var(--text-faint); }
+.logo .word { color: var(--text); }
+.nav-links {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+.nav-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--tg-blue);
+  color: #ffffff !important;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.nav-cta:hover { background: var(--tg-blue-hover); color: #ffffff !important; }
+.nav-cta svg { width: 14px; height: 14px; }
+.hero {
+  padding: 120px 0 60px;
+  text-align: center;
+}
+.hero-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.hero h1 {
+  font-size: clamp(48px, 7vw, 88px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 32px;
+}
+.hero h1 .dim { color: var(--text-dim); }
+.hero p.lead {
+  font-size: clamp(18px, 2vw, 22px);
+  color: var(--text-dim);
+  max-width: 720px;
+  margin: 0 auto 48px;
+  line-height: 1.5;
+}
+.login {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.login-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+  border: 1px solid transparent;
+  width: 100%;
+}
+.login-btn.tg {
+  background: var(--tg-blue);
+  color: #ffffff;
+}
+.login-btn.tg:hover {
+  background: var(--tg-blue-hover);
+  transform: translateY(-1px);
+}
+.login-btn svg.icon { width: 20px; height: 20px; flex-shrink: 0; }
+.login-btn.disabled {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.login-btn .soon {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  margin-left: auto;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+}
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.cta-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.free-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.free-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #4ade80;
+  border-radius: 50%;
+}
+.flow-section {
+  padding: 60px 0 100px;
+}
+.flow-svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 900px;
+  width: 100%;
+  height: auto;
+}
+.flow-svg .hub-circle {
+  fill: var(--card-hi);
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.flow-svg .hub-label {
+  fill: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.flow-svg .node-circle {
+  fill: var(--card);
+  stroke: var(--border-hi);
+  stroke-width: 1;
+}
+.flow-svg .node-label {
+  fill: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.flow-svg .flow-line {
+  stroke: var(--border-hi);
+  stroke-width: 1;
+  fill: none;
+  stroke-dasharray: 3 4;
+}
+@keyframes flowMove {
+  0% { offset-distance: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+.flow-particle {
+  animation: flowMove 4s linear infinite;
+}
+.flow-caption {
+  text-align: center;
+  margin-top: 24px;
+  font-family: 'Source Serif Pro', serif;
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+section {
+  padding: 100px 0;
+  border-top: 1px solid var(--border);
+}
+.section-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.section-h {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  max-width: 800px;
+}
+.section-h .dim { color: var(--text-dim); }
+.section-lead {
+  font-size: 19px;
+  color: var(--text-dim);
+  max-width: 720px;
+  line-height: 1.6;
+  margin-bottom: 48px;
+}
+.connect-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+.connect-group {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+}
+.connect-group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.connect-group-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.connect-group-meta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.connect-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.connect-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.connect-item:hover {
+  border-color: var(--border-hi);
+  background: rgba(255, 255, 255, 0.04);
+}
+.connect-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text);
+}
+.connect-item .name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.connect-item.live .connect-icon { color: var(--tg-blue); }
+.editorial-body {
+  font-family: 'Source Serif Pro', Georgia, serif;
+  font-size: 19px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+.editorial-body p { margin-bottom: 20px; }
+.editorial-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.dropcap::first-letter {
+  float: left;
+  font-family: 'Source Serif Pro', serif;
+  font-size: 70px;
+  line-height: 0.85;
+  font-weight: 600;
+  margin: 8px 14px 0 0;
+  color: var(--text);
+}
+.pullquote {
+  border-left: 3px solid var(--text);
+  padding: 4px 0 4px 28px;
+  margin: 36px 0;
+  font-family: 'Source Serif Pro', serif;
+  font-size: 24px;
+  line-height: 1.4;
+  color: var(--text);
+  font-weight: 400;
+  font-style: italic;
+}
+.roles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+.role-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+}
+.role-card .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.role-card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.role-card p {
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.build-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+.build-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.build-card:hover {
+  border-color: var(--border-hi);
+  background: var(--card-hi);
+}
+.build-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+.build-card .num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.build-card h4 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.build-card p {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.free-section {
+  text-align: center;
+  padding: 100px 0;
+  border-top: 1px solid var(--border);
+}
+.free-section .section-h {
+  margin: 0 auto 24px;
+  text-align: center;
+}
+.free-section .section-lead {
+  margin: 0 auto;
+  text-align: center;
+}
+.free-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 48px;
+}
+.free-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 16px;
+}
+.free-item .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.free-item .value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.final-cta {
+  text-align: center;
+  padding: 140px 0;
+  border-top: 1px solid var(--border);
+}
+.final-cta h2 {
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.final-cta p {
+  font-size: 19px;
+  color: var(--text-dim);
+  margin-bottom: 40px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.final-cta .login {
+  margin: 0 auto;
+}
+footer {
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  margin-left: 24px;
+}
+footer a:hover { color: var(--text); }
+@media (max-width: 800px) {
+  .connect-items { grid-template-columns: repeat(2, 1fr); }
+  .roles { grid-template-columns: 1fr; }
+  .build-grid { grid-template-columns: 1fr; }
+  .free-row { grid-template-columns: repeat(2, 1fr); }
+  .nav-links { gap: 16px; }
+  .nav-links a:not(.nav-cta) { display: none; }
+  .hero { padding: 80px 0 40px; }
+  section { padding: 70px 0; }
+  .final-cta { padding: 90px 0; }
+  .editorial-body { font-size: 17px; }
+  .pullquote { font-size: 20px; padding-left: 20px; }
+  .dropcap::first-letter { font-size: 54px; margin-right: 10px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+  <defs>
+    <symbol id="i-telegram" viewBox="0 0 24 24">
+      <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-email" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <path d="M3 7l9 6 9-6"/>
+    </symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="14" r="4"/>
+      <path d="M11 11l9-9"/>
+      <path d="M16 6l3 3"/>
+    </symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="7" width="14" height="12" rx="3"/>
+      <circle cx="9.5" cy="13" r="1" fill="currentColor"/>
+      <circle cx="14.5" cy="13" r="1" fill="currentColor"/>
+      <path d="M9.5 16.5h5"/>
+      <path d="M12 7V4"/>
+      <circle cx="12" cy="3" r="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-channel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9v6"/>
+      <path d="M5 9l11-5v16L5 15"/>
+      <path d="M19 9a3 3 0 0 1 0 6"/>
+    </symbol>
+    <symbol id="i-group" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="9" r="3"/>
+      <circle cx="17" cy="10.5" r="2.5"/>
+      <path d="M3 19c0-3 3-5 6-5s6 2 6 5"/>
+      <path d="M17 16c2 0 4 1 4 3"/>
+    </symbol>
+    <symbol id="i-site" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <path d="M3 9h18"/>
+      <circle cx="6.5" cy="6.5" r="0.5" fill="currentColor"/>
+      <circle cx="8.5" cy="6.5" r="0.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-mobile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="7" y="3" width="10" height="18" rx="2"/>
+      <path d="M11 18h2"/>
+    </symbol>
+    <symbol id="i-chatgpt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4 4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z"/>
+      <path d="M4 12a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/>
+    </symbol>
+    <symbol id="i-claude" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2L13.5 9.5L21 11L13.5 12.5L12 20L10.5 12.5L3 11L10.5 9.5L12 2z"/>
+    </symbol>
+    <symbol id="i-grok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 5l14 14"/>
+      <path d="M19 5L5 19"/>
+    </symbol>
+    <symbol id="i-gemini" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>
+    </symbol>
+    <symbol id="i-agent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v4"/>
+      <path d="M12 17v4"/>
+      <path d="M3 12h4"/>
+      <path d="M17 12h4"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-ai-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 5l-4 7 4 7"/>
+      <path d="M16 5l4 7-4 7"/>
+      <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 18a5 5 0 0 1 0-10 6 6 0 0 1 11 2 4 4 0 0 1 0 8z"/>
+      <path d="M9 14h6"/>
+    </symbol>
+    <symbol id="i-bot-build" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="9" width="20" height="16" rx="3"/>
+      <circle cx="13" cy="17" r="1.5" fill="currentColor"/>
+      <circle cx="19" cy="17" r="1.5" fill="currentColor"/>
+      <path d="M13 21h6"/>
+      <path d="M16 9V5"/>
+      <circle cx="16" cy="3" r="1.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-miniapp" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="4" width="16" height="24" rx="3"/>
+      <path d="M14 24h4"/>
+      <rect x="11" y="9" width="10" height="6" rx="1"/>
+    </symbol>
+    <symbol id="i-site-build" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="6" width="24" height="20" rx="2"/>
+      <path d="M4 12h24"/>
+      <path d="M9 18h8"/>
+      <path d="M9 22h14"/>
+    </symbol>
+    <symbol id="i-app" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="11" height="11" rx="2"/>
+      <rect x="17" y="4" width="11" height="11" rx="2"/>
+      <rect x="4" y="17" width="11" height="11" rx="2"/>
+      <rect x="17" y="17" width="11" height="11" rx="2"/>
+    </symbol>
+    <symbol id="i-game" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="9" width="26" height="14" rx="4"/>
+      <path d="M9 14v4M7 16h4"/>
+      <circle cx="22" cy="14" r="1.2" fill="currentColor"/>
+      <circle cx="25" cy="17" r="1.2" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-doc" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3h11l6 6v17a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z"/>
+      <path d="M19 3v6h6"/>
+      <path d="M10 16h12M10 20h12M10 24h7"/>
+    </symbol>
+  </defs>
+</svg>
+<nav>
+  <div class="container nav-inner">
+    <div class="logo">
+      <span class="bracket">[</span><span class="word">hub</span><span class="bracket">]</span>
+    </div>
+    <div class="nav-links">
+      <a href="#what">What connects</a>
+      <a href="#how">How it works</a>
+      <a href="#build">Build</a>
+      <a href="#free">Free</a>
+      <a href="https://t.me/LabsHubBot" class="nav-cta">
+        <svg class="icon"><use href="#i-telegram"/></svg>
+        Open in Telegram
+      </a>
+    </div>
+  </div>
+</nav>
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">A Labs Project · Alpha</div>
+    <h1>
+      Connect everything.<br>
+      <span class="dim">Manage from chat.</span>
+    </h1>
+    <p class="lead">
+      Your <mark>bot</mark>, your <mark>channel</mark>, your <mark>site</mark>, your <mark>app</mark>, your <mark>ChatGPT</mark>, your <mark>Claude</mark> — all in one place. Hub connects them and lets information flow between them. You manage it all from a simple chat.
+    </p>
+    <div class="login">
+      <div class="login-label">Sign in</div>
+      <a href="https://t.me/LabsHubBot" class="login-btn tg">
+        <svg class="icon"><use href="#i-telegram"/></svg>
+        Continue with Telegram
+      </a>
+      <div class="login-divider">or</div>
+      <span class="login-btn disabled">
+        <svg class="icon"><use href="#i-email"/></svg>
+        Continue with Email
+        <span class="soon">SOON</span>
+      </span>
+      <span class="login-btn disabled">
+        <svg class="icon"><use href="#i-key"/></svg>
+        Continue with Secret Phrase
+        <span class="soon">SOON</span>
+      </span>
+    </div>
+    <div class="cta-meta">
+      <span class="free-badge">Free · No signup · No card</span>
+    </div>
+  </div>
+</section>
+<section class="flow-section" style="border-top: 1px solid var(--border);">
+  <div class="container">
+    <svg class="flow-svg" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hub at the center, connected to bot, channel, group, site, app, ChatGPT, Claude, Grok, Gemini, agents, APIs">
+      <g>
+        <path id="p1" class="flow-line" d="M 450 280 L 450 80"/>
+        <path id="p2" class="flow-line" d="M 450 280 L 720 130"/>
+        <path id="p3" class="flow-line" d="M 450 280 L 830 280"/>
+        <path id="p4" class="flow-line" d="M 450 280 L 720 430"/>
+        <path id="p5" class="flow-line" d="M 450 280 L 580 500"/>
+        <path id="p6" class="flow-line" d="M 450 280 L 320 500"/>
+        <path id="p7" class="flow-line" d="M 450 280 L 180 430"/>
+        <path id="p8" class="flow-line" d="M 450 280 L 70 280"/>
+        <path id="p9" class="flow-line" d="M 450 280 L 180 130"/>
+        <path id="p10" class="flow-line" d="M 450 280 L 280 60"/>
+        <path id="p11" class="flow-line" d="M 450 280 L 620 60"/>
+      </g>
+      <g>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 450 80'); animation-delay: 0s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 720 130'); animation-delay: 0.4s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 830 280'); animation-delay: 0.8s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 720 430'); animation-delay: 1.2s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 580 500'); animation-delay: 1.6s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 320 500'); animation-delay: 2s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 180 430'); animation-delay: 2.4s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 70 280'); animation-delay: 2.8s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 180 130'); animation-delay: 3.2s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 280 60'); animation-delay: 3.6s;"/>
+        <circle class="flow-particle" r="3" fill="white" style="offset-path: path('M 450 280 L 620 60'); animation-delay: 0.2s;"/>
+      </g>
+      <g transform="translate(450, 80)">
+        <circle class="node-circle" r="32" stroke="rgba(34,158,217,0.4)"/>
+        <g transform="translate(-12, -12)"><use href="#i-bot" width="24" height="24" stroke="#229ED9" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50" fill="#229ED9">BOT · LIVE</text>
+      </g>
+      <g transform="translate(720, 130)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-channel" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">CHANNEL</text>
+      </g>
+      <g transform="translate(830, 280)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-site" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">SITE</text>
+      </g>
+      <g transform="translate(720, 430)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-mobile" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">APP</text>
+      </g>
+      <g transform="translate(580, 500)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-api" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">API</text>
+      </g>
+      <g transform="translate(320, 500)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-agent" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">AGENT</text>
+      </g>
+      <g transform="translate(180, 430)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-group" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">GROUP</text>
+      </g>
+      <g transform="translate(70, 280)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-grok" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">GROK</text>
+      </g>
+      <g transform="translate(180, 130)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-claude" width="24" height="24" fill="white"/></g>
+        <text class="node-label" text-anchor="middle" y="50">CLAUDE</text>
+      </g>
+      <g transform="translate(280, 60)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-gemini" width="24" height="24" fill="white"/></g>
+        <text class="node-label" text-anchor="middle" y="50">GEMINI</text>
+      </g>
+      <g transform="translate(620, 60)">
+        <circle class="node-circle" r="32"/>
+        <g transform="translate(-12, -12)"><use href="#i-chatgpt" width="24" height="24" stroke="white" fill="none" stroke-width="1.5"/></g>
+        <text class="node-label" text-anchor="middle" y="50">CHATGPT</text>
+      </g>
+      <g transform="translate(450, 280)">
+        <circle class="hub-circle" r="60"/>
+        <text class="hub-label" text-anchor="middle" dominant-baseline="middle" dy="2">[hub]</text>
+      </g>
+    </svg>
+    <p class="flow-caption">Eleven things. One Hub. Information flows in every direction.</p>
+  </div>
+</section>
+<section id="what">
+  <div class="container">
+    <div class="section-eyebrow">What connects</div>
+    <h2 class="section-h">
+      Anything you have online. <span class="dim">Connect it to Hub.</span>
+    </h2>
+    <p class="section-lead">
+      Hub is built to bring together the things you already use. Group them how it makes sense — a place to talk to people, a place to talk to AI, a place to talk to other systems. Everything routes through one Hub.
+    </p>
+    <div class="connect-groups">
+      <div class="connect-group">
+        <div class="connect-group-header">
+          <div class="connect-group-title">Where you talk to people</div>
+          <div class="connect-group-meta">CHANNELS &amp; AUDIENCES</div>
+        </div>
+        <div class="connect-items">
+          <div class="connect-item live">
+            <svg class="connect-icon"><use href="#i-bot"/></svg>
+            <div class="name">Telegram bot</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-channel"/></svg>
+            <div class="name">Channel</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-group"/></svg>
+            <div class="name">Group</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-site"/></svg>
+            <div class="name">Website</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-mobile"/></svg>
+            <div class="name">Mobile app</div>
+          </div>
+        </div>
+      </div>
+      <div class="connect-group">
+        <div class="connect-group-header">
+          <div class="connect-group-title">Where you talk to AI</div>
+          <div class="connect-group-meta">YOUR LLMS &amp; AGENTS</div>
+        </div>
+        <div class="connect-items">
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-chatgpt"/></svg>
+            <div class="name">ChatGPT</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-claude"/></svg>
+            <div class="name">Claude</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-grok"/></svg>
+            <div class="name">Grok</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-gemini"/></svg>
+            <div class="name">Gemini</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-agent"/></svg>
+            <div class="name">Custom agents</div>
+          </div>
+        </div>
+      </div>
+      <div class="connect-group">
+        <div class="connect-group-header">
+          <div class="connect-group-title">Where you talk to systems</div>
+          <div class="connect-group-meta">APIS &amp; INTEGRATIONS</div>
+        </div>
+        <div class="connect-items">
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-ai-api"/></svg>
+            <div class="name">AI APIs</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-api"/></svg>
+            <div class="name">Service APIs</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-agent"/></svg>
+            <div class="name">Webhooks</div>
+          </div>
+          <div class="connect-item">
+            <svg class="connect-icon"><use href="#i-doc"/></svg>
+            <div class="name">Data sources</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="how">
+  <div class="container-narrow">
+    <div class="section-eyebrow">The idea</div>
+    <h2 class="section-h">
+      Think of it as <span class="dim">an airport.</span>
+    </h2>
+    <div class="editorial-body">
+      <p class="dropcap">
+        A big airport is where everything passes through. People fly in, fly out, change planes. Cargo moves alongside passengers. Different airlines share the same runways. Information boards keep everyone oriented. It works because <mark>everything connects in one place</mark> — but nothing is forced through any single path.
+      </p>
+      <blockquote class="pullquote">
+        Hub is that, for everything you have online.
+      </blockquote>
+      <p>
+        Your bot, your channel, your site, your app, your ChatGPT account, your Claude account, your APIs — they all plug into Hub. Information flows between them: a message from your bot reaches your group, a question from your site goes to ChatGPT, a result from Claude goes back to your customers. <strong>You set the routes. Hub runs the traffic.</strong>
+      </p>
+      <p>
+        And because Hub starts inside Telegram, you manage all of this from a chat. No dashboards, no admin panels, no separate logins.
+      </p>
+    </div>
+    <div class="roles">
+      <div class="role-card">
+        <div class="label">YOU</div>
+        <h3>Manage from chat</h3>
+        <p>You're the owner. You connect things, set the rules, watch the flow. Everything runs from one Telegram chat with Hub.</p>
+      </div>
+      <div class="role-card">
+        <div class="label">EVERYONE ELSE</div>
+        <h3>Use what's connected</h3>
+        <p>Anyone you give access to can also use Hub — as a contributor, as a customer, as an AI agent. Same Hub, different role.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="build">
+  <div class="container">
+    <div class="section-eyebrow">Build layer</div>
+    <h2 class="section-h">
+      Don't have it yet? <span class="dim">Hub builds it.</span>
+    </h2>
+    <p class="section-lead">
+      Need a bot you don't have? A site? A mini-app? Hub creates it for you with AI. Direct integration with Anthropic <code>Claude</code> through Claude in Chrome. More models — open source and proprietary — as the catalog grows. <mark>All free.</mark>
+    </p>
+    <div class="build-grid">
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-bot-build"/></svg>
+        <div class="num">01 / BOTS</div>
+        <h4>Conversational logic</h4>
+        <p>From simple replies to full conversational agents. Custom logic, branching flows, persistent memory.</p>
+      </div>
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-miniapp"/></svg>
+        <div class="num">02 / MINI APPS</div>
+        <h4>Native interfaces</h4>
+        <p>Forms, dashboards, marketplaces, calculators, payment flows — all live inside chat.</p>
+      </div>
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-site-build"/></svg>
+        <div class="num">03 / SITES</div>
+        <h4>Web presence</h4>
+        <p>Landing pages, full sites, microsites. Hosted, versioned, AI-edited from chat.</p>
+      </div>
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-app"/></svg>
+        <div class="num">04 / APPS</div>
+        <h4>Full applications</h4>
+        <p>Backend, database, frontend — generated, deployed, monitored. End-to-end stack from a description.</p>
+      </div>
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-game"/></svg>
+        <div class="num">05 / GAMES</div>
+        <h4>Playable experiences</h4>
+        <p>In chat, in mini-apps, on the web. Single-player, multiplayer, leaderboards.</p>
+      </div>
+      <div class="build-card">
+        <svg class="build-icon"><use href="#i-doc"/></svg>
+        <div class="num">06 / DOCS</div>
+        <h4>Knowledge bases</h4>
+        <p>Documentation, internal wikis, manuals. AI-generated, AI-maintained, always up to date.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="free" class="free-section">
+  <div class="container">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-h">
+      Free. <span class="dim">All of it.</span>
+    </h2>
+    <p class="section-lead">
+      Hub is free to use. <mark>No tiers, no trials, no card required.</mark> Connect as many things as you want. Build as much as you need. We'll add paid options later for advanced needs — the core stays free.
+    </p>
+    <div class="free-row">
+      <div class="free-item">
+        <div class="label">Cost</div>
+        <div class="value">$0</div>
+      </div>
+      <div class="free-item">
+        <div class="label">Signup</div>
+        <div class="value">None</div>
+      </div>
+      <div class="free-item">
+        <div class="label">Card</div>
+        <div class="value">Not needed</div>
+      </div>
+      <div class="free-item">
+        <div class="label">Limits</div>
+        <div class="value">Generous</div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="final-cta">
+  <div class="container">
+    <h2>Open <span style="color: var(--text-dim)">@LabsHubBot</span></h2>
+    <p>Connect everything. Manage from chat. Free.</p>
+    <div class="login">
+      <a href="https://t.me/LabsHubBot" class="login-btn tg">
+        <svg class="icon"><use href="#i-telegram"/></svg>
+        Continue with Telegram
+      </a>
+      <div class="login-divider">or</div>
+      <span class="login-btn disabled">
+        <svg class="icon"><use href="#i-email"/></svg>
+        Continue with Email
+        <span class="soon">SOON</span>
+      </span>
+      <span class="login-btn disabled">
+        <svg class="icon"><use href="#i-key"/></svg>
+        Continue with Secret Phrase
+        <span class="soon">SOON</span>
+      </span>
+    </div>
+    <div class="cta-meta">
+      <span class="free-badge">Free · No signup · No card</span>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="container footer-inner">
+    <div>
+      <span class="logo"><span class="bracket">[</span><span class="word">hub</span><span class="bracket">]</span></span>
+      <span style="margin-left: 16px;">A Labs project · hub.labs.co · Alpha · Free</span>
+    </div>
+    <div>
+      <a href="https://labs.co">labs.co</a>
+      <a href="https://t.me/LabsHubBot">@LabsHubBot</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
