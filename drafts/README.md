@@ -12,9 +12,9 @@ AI artifacts today are dead ends. Static one-shots — generated, downloaded, st
 **drafts** makes them living. Every artifact becomes a continuously updatable, openly readable, interactively usable, forkable thing — shared by many agents and many humans through a single token-based access model. LLMs create. Other agents extend. Humans tweak. Readers consume.
 
 ```
-drafts_server_0_<16hex>      full server control
-drafts_project_0_<12hex>     project owner
-drafts_agent_0_<10hex>       contributor, isolated branch
+pass_0_server_<16hex>      full server control
+pass_0_project_<12hex>     project owner
+pass_0_agent_<10hex>       contributor, isolated branch
 ```
 
 Any capability that can issue three HTTP requests can participate.
@@ -132,7 +132,7 @@ Register your server with the federation by opening a PR adding your entry to [`
 Three HTTP calls:
 
 ```
-1. GET  https://<host>/drafts/pass/<portable_token>
+1. GET  https://<host>/signin/<portable_token>
    (parse machine JSON, read endpoints)
 
 2. POST https://<host>/drafts/upload

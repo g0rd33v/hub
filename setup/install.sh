@@ -199,5 +199,5 @@ echo "  SAP token     $(cat $SAP_FILE)"
 echo
 echo "next:"
 echo "  1. open the master bot in Telegram (token in /etc/labs/drafts.env)"
-echo "  2. activate SAP via:  $PUBLIC_BASE/drafts/pass/drafts_server_${SERVER_NUMBER}_$(cat $SAP_FILE)"
+echo "  2. activate SAP via:  $PUBLIC_BASE/signin/pass_${SERVER_NUMBER}_server_$(cat $SAP_FILE)"
 echo "  3. import projects:   cd $HUB_DIR/projects && ls"

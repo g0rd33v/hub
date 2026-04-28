@@ -15,7 +15,7 @@
         "api": "https://beta.labs.vc/drafts/",
         "gallery": "https://beta.labs.vc/drafts/",
         "about": "https://beta.labs.vc/drafts/about/",
-        "welcome_canonical": "https://beta.labs.vc/drafts/pass/<token>"
+        "welcome_canonical": "https://beta.labs.vc/signin/<token>"
       }
     },
     "1": {
@@ -26,7 +26,7 @@
       "endpoints": {
         "base": "https://drafts.labs.vc",
         "api": "https://drafts.labs.vc/drafts/",
-        "welcome_canonical": "https://drafts.labs.vc/drafts/pass/<token>"
+        "welcome_canonical": "https://drafts.labs.vc/signin/<token>"
       }
     }
   },
@@ -41,11 +41,11 @@
     "server_number": "Integer. 0 is the canonical server at beta.labs.vc, AND the default for any local/unregistered install. Other operators register here via PR for a unique number.",
     "secret": "Lowercase hex. 16 chars for server tier (8 bytes), 12 chars for project (6 bytes), 10 chars for agent (5 bytes).",
     "examples": {
-      "server": "drafts_server_0_91e52304063d5440",
-      "project": "drafts_project_0_a30aca1fe85b",
-      "agent": "drafts_agent_0_b7fabf75b3"
+      "server": "pass_0_server_91e52304063d5440",
+      "project": "pass_0_project_a30aca1fe85b",
+      "agent": "pass_0_agent_b7fabf75b3"
     },
-    "canonical_url": "https://<host>/drafts/pass/<full_token>"
+    "canonical_url": "https://<host>/signin/<full_token>"
   },
   "claim_a_number": "Open a pull request against https://github.com/g0rd33v/drafts-protocol/blob/main/drafts-registry.json adding your server entry. One number per operational drafts instance. Number 0 is reserved for unregistered local installs."
 }

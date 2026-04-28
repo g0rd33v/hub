@@ -79,10 +79,10 @@ Token entropy budget is sized against the dominant threat model: a distributed b
 ### 2.1 Canonical welcome URL
 
 ```
-GET /drafts/pass/<portable_token>
+GET /signin/<portable_token>
 ```
 
-The portable token (`drafts_server_<n>_<hex>`, `drafts_project_<n>_<hex>`, or `drafts_agent_<n>_<hex>`) appears as a single path segment. Servers MUST accept this form.
+The portable token (`pass_<n>_server_<hex>`, `pass_<n>_project_<hex>`, or `pass_<n>_agent_<hex>`) appears as a single path segment. Servers MUST accept this form.
 
 Response: `200 OK` with `Content-Type: text/html; charset=utf-8`. Body MUST contain an HTML page AND a `<script type="application/json" id="claude-instructions">` block carrying machine-readable context (§5).
 
@@ -165,7 +165,7 @@ Success:
 {
   "ok": true,
   "project": "<name>",
-  "pap_activation_url": "https://<host>/drafts/pass/drafts_project_<n>_<hex>",
+  "pap_activation_url": "https://<host>/signin/pass_<n>_project_<hex>",
   "live_url": "https://<host>/live/<name>/",
   "drafts_view_url": "https://<host>/drafts-view/<name>/"
 }
@@ -397,7 +397,7 @@ On exceed: `429 Too Many Requests` with `Retry-After` header in seconds.
 
 Implementations SHOULD additionally enforce per-IP limits independent of token:
 
-- `/drafts/pass/*` — 30 req/min per IP, 100 req/day per IP
+- `/signin/*` — 30 req/min per IP, 100 req/day per IP
 - All other `/drafts/*` — 60 req/min per IP
 
 This protects against distributed token-scanning attacks that per-token limits cannot see. The reference implementation does not enforce these yet (queued for 0.3); operators SHOULD add fail2ban or equivalent at the nginx layer in the meantime.
@@ -421,7 +421,7 @@ Minimum required fields:
     "scheme": "Bearer",
     "token": "<internal-form token>"
   },
-  "portable_identifier": "https://<host>/drafts/pass/drafts_<tier>_<n>_<hex>",
+  "portable_identifier": "https://<host>/signin/pass_<n>_<tier>_<hex>",
   "server_number": <n>,
   "registry_url": "https://github.com/g0rd33v/drafts-protocol/blob/main/drafts-registry.json",
   "endpoints": [
@@ -475,7 +475,7 @@ Schema: see [`drafts-registry.json`](../drafts-registry.json) for the live docum
 - `description` — short human-readable
 - `endpoints.base` — `https://<host>`
 - `endpoints.api` — `https://<host>/drafts/`
-- `endpoints.welcome_canonical` — `https://<host>/drafts/pass/<token>`
+- `endpoints.welcome_canonical` — `https://<host>/signin/<token>`
 
 ### 6.2 Server numbers
 
@@ -534,7 +534,7 @@ GitHub PATs configured via §3.4 are stored in plaintext in the server's `.state
 0.2 is NOT wire-compatible with 0.1:
 
 - 0.1 tokens were 64/48/48 hex; 0.2 are 16/12/10 hex
-- 0.1 canonical URL was `/drafts/p/` and `/drafts_0_<token>`; 0.2 is `/drafts/pass/<portable>`
+- 0.1 canonical URL was `/drafts/p/` and `/drafts_0_<token>`; 0.2 is `/signin/<portable>`
 - 0.1 machine JSON lacked `protocol` and `protocol_version` fields
 - 0.1 servers exposed `GET /drafts/registry.json`; 0.2.1 moved registry to GitHub and removed the per-server endpoint
 

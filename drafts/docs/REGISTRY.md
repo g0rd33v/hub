@@ -30,7 +30,7 @@ You only need a public server number if you want third-party tooling, registries
 
 5. **Open a pull request.** A maintainer verifies:
    - Your server responds at `<base>/drafts/health` with `{"ok":true,"protocol":"drafts","version":"0.2"}`
-   - Welcome page renders at `<base>/drafts/pass/<token>` with embedded machine JSON
+   - Welcome page renders at `<base>/signin/<token>` with embedded machine JSON
    - Token format and rate limits conform to [SPEC.md §1, §4](SPEC.md)
 
 6. **After merge:** edit `/etc/labs/drafts.env` on your server, set `SERVER_NUMBER=<your_assigned_number>`, restart with `pm2 restart drafts`. Existing tokens stay valid (they are matched by hex, not number); new tokens mint with the new number.
@@ -52,7 +52,7 @@ Add to `servers` in `drafts-registry.json`:
   "endpoints": {
     "base": "https://<your-host>",
     "api": "https://<your-host>/drafts/",
-    "welcome_canonical": "https://<your-host>/drafts/pass/<token>"
+    "welcome_canonical": "https://<your-host>/signin/<token>"
   }
 }
 ```

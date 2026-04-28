@@ -907,7 +907,7 @@ function mountRoutes(app) {
         name: p.name, description: p.description, github_repo: p.github_repo,
         github_autosync: !!p.github_autosync,
         created_at: p.created_at, live_url: PUBLIC_BASE + '/' + p.name + '/',
-        pass_url: PUBLIC_BASE + '/drafts/pass/drafts_project_' + SERVER_NUMBER + '_' + token.replace(/^pap_/,''),
+        pass_url: PUBLIC_BASE + '/signin/pass_' + SERVER_NUMBER + '_project_' + token.replace(/^pap_/,''),
         aaps: (p.aaps || []).map(a => ({ id: a.id, name: a.name, revoked: a.revoked, branch: a.branch })),
         bot: projectBotsApi.getBotStatus(p),
       }});
@@ -920,7 +920,7 @@ function mountRoutes(app) {
       return res.json({ ok: true, tier: 'aap', public_base: PUBLIC_BASE,
         project: { name: hit.project.name, live_url: PUBLIC_BASE + '/' + hit.project.name + '/' },
         aap: { id: hit.aap.id, name: hit.aap.name, branch: hit.aap.branch },
-        pass_url: PUBLIC_BASE + '/drafts/pass/drafts_agent_' + SERVER_NUMBER + '_' + token.replace(/^aap_/,''),
+        pass_url: PUBLIC_BASE + '/signin/pass_' + SERVER_NUMBER + '_agent_' + token.replace(/^aap_/,''),
       });
     }
     if (tier === 'sap-project') {

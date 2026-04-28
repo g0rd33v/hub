@@ -10,7 +10,7 @@
 //   /<n>/<path>               -> file from live
 //   /<n>/v/<N>/               -> snapshot of commit #N
 //   /<n>/v/<N>/<path>         -> file from snapshot N
-//   /drafts/pass/<token>         -> welcome (SAP/PAP/AAP)
+//   /signin/<token>         -> welcome (SAP/PAP/AAP)
 //   /drafts/...                  -> API
 //   /telepath/app/{sap|pap|aap}  -> Telegram WebApp dashboards
 //
@@ -77,7 +77,7 @@ if (!SAP_TOKEN) {
     console.log('  drafts: NEW SAP MINTED — SAVE THIS, ONLY SHOWN ONCE');
     console.log('  SAP token: ' + SAP_TOKEN);
     console.log('  Saved to: ' + sapFile + ' (mode 0600)');
-    console.log('  Welcome:  ' + PUBLIC_BASE + '/drafts/pass/drafts_server_' + SERVER_NUMBER + '_' + SAP_TOKEN);
+    console.log('  Welcome:  ' + PUBLIC_BASE + '/signin/pass_' + SERVER_NUMBER + '_server_' + SAP_TOKEN);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   } catch (e) {
     console.log('SAP minted (NOT persisted, save now): ' + SAP_TOKEN + ' — error: ' + e.message);
@@ -204,7 +204,7 @@ async function _createProjectInternal({ name, description = '', github_repo = nu
   const out = {
     project: name,
     pap_token: pap.token,
-    pap_activation_url: `${PUBLIC_BASE}/drafts/pass/drafts_project_${SERVER_NUMBER}_${papSecret}`,
+    pap_activation_url: `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_project_${papSecret}`,
     live_url: `${PUBLIC_BASE}/${name}/`,
     raw: proj,
   };
@@ -221,7 +221,7 @@ async function _createAAPInternal(project, { name = null }) {
   const aapSecret = aap.token.replace(/^aap_/, '');
   return {
     aap: { id: aap.id, name: aap.name, branch: aap.branch, created_at: aap.created_at, token: aap.token },
-    activation_url: `${PUBLIC_BASE}/drafts/pass/drafts_agent_${SERVER_NUMBER}_${aapSecret}`,
+    activation_url: `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_agent_${aapSecret}`,
   };
 }
 
@@ -987,7 +987,7 @@ function renderPage({ tier, token, project, aap, versions = [] }) {
   const apiBase = PUBLIC_BASE + '/drafts';
   const tierWord = isPAP ? 'project' : isAAP ? 'agent' : 'server';
   const cleanTok = token.replace(/^(pap|aap)_/, '');
-  const portableId = `${PUBLIC_BASE}/drafts/pass/drafts_${tierWord}_${SERVER_NUMBER}_${cleanTok}`;
+  const portableId = `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_${tierWord}_${cleanTok}`;
   const tpStatus = getTelepathStatus();
   const playbook = buildAgentPlaybook(tier, project, apiBase, token);
   const hero = heroContent(tier, project, versions, PUBLIC_BASE);
@@ -1152,7 +1152,14 @@ async function welcomeRoute(req, res) {
     else if (tierWord === "agent") token = "aap_" + secret;
   }
   let tier;
-  if (token.startsWith("pap_")) tier = "pap";
+  // New format: pass_<N>_<role>_<hex>
+  const newFmt = token.match(/^pass_(\d+)_(server|project|agent)_([a-f0-9]+)$/i);
+  if (newFmt) {
+    const role = newFmt[2];
+    if (role === 'server') tier = 'sap';
+    else if (role === 'project') { tier = 'pap'; token = 'pap_' + newFmt[3]; }
+    else if (role === 'agent') { tier = 'aap'; token = 'aap_' + newFmt[3]; }
+  } else if (token.startsWith("pap_")) tier = "pap";
   else if (token.startsWith("aap_")) tier = "aap";
   else if (/^[0-9a-f]{12,64}$/i.test(token)) tier = "sap";
   else return res.status(404).send("not found");
@@ -1175,7 +1182,7 @@ async function welcomeRoute(req, res) {
   }
 }
 
-app.get('/drafts/pass/:token', welcomeRoute);
+app.get('/signin/:token', welcomeRoute);
 
 app.get('/m/:token', (req, res) => {
   return res.status(410).type('html').send('<h1>This link has expired</h1><p>Drafts was upgraded. Ask the server owner for a fresh link.</p>');
@@ -1209,7 +1216,7 @@ app.get('/drafts/projects', authSAP, (req, res) => {
     projects: state.projects.map(p => ({
       name: p.name, description: p.description, github_repo: p.github_repo, github_autosync: !!p.github_autosync,
       created_at: p.created_at, live_url: `${PUBLIC_BASE}/${p.name}/`,
-      pap: p.pap ? { id: p.pap.id, revoked: p.pap.revoked, activation_url: `${PUBLIC_BASE}/drafts/pass/drafts_project_${SERVER_NUMBER}_${p.pap.token.replace(/^pap_/,'')}` } : null,
+      pap: p.pap ? { id: p.pap.id, revoked: p.pap.revoked, activation_url: `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_project_${p.pap.token.replace(/^pap_/,'')}` } : null,
       aaps: (p.aaps || []).map(a => ({ id: a.id, name: a.name, revoked: a.revoked })),
       bot: p.bot ? {
         bot_username: p.bot.bot_username,
@@ -1456,7 +1463,7 @@ app.get('/drafts/aaps', authPAPorSAP, async (req, res) => {
       try { const log = await git.log({ from: 'main', to: br }); pending = log.total; } catch (e) {}
     }
     const aapSecret = a.token.replace(/^aap_/, '');
-    return { id: a.id, name: a.name, branch: br, revoked: a.revoked, created_at: a.created_at, activation_url: `${PUBLIC_BASE}/drafts/pass/drafts_agent_${SERVER_NUMBER}_${aapSecret}`, pending_commits: pending };
+    return { id: a.id, name: a.name, branch: br, revoked: a.revoked, created_at: a.created_at, activation_url: `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_agent_${aapSecret}`, pending_commits: pending };
   }));
   res.json({ ok: true, project: p.name, aaps });
 });
@@ -1861,7 +1868,7 @@ app.listen(PORT, '127.0.0.1', () => {
   console.log(`  public_base: ${PUBLIC_BASE}`);
   console.log(`  server_number: ${SERVER_NUMBER}`);
   console.log(`  data_dir: ${DRAFTS_DIR}`);
-  console.log(`  SAP welcome: ${PUBLIC_BASE}/drafts/pass/drafts_server_${SERVER_NUMBER}_${SAP_TOKEN.slice(0,8)}... (full token in /etc/labs/drafts.sap)`);
+  console.log(`  SAP welcome: ${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_server_${SAP_TOKEN.slice(0,8)}... (full token in /etc/labs/drafts.sap)`);
 
   initTelepath({
     draftsDir: DRAFTS_DIR,

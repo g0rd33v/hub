@@ -36,7 +36,7 @@ The reference implementation `drafts.js` does not yet match the API surface that
 ### Protocol (breaking)
 
 - Token lengths shortened to 16/12/10 hex (server/project/agent) — previously 64/48/48
-- Canonical welcome URL is now `/drafts/pass/<portable_token>` accepting the full `drafts_<tier>_<n>_<secret>` form as a path segment
+- Canonical welcome URL is now `/signin/<portable_token>` accepting the full `drafts_<tier>_<n>_<secret>` form as a path segment
 - Token tier words changed from `sap`/`pap`/`aap` to `server`/`project`/`agent` (human-readable)
 - Machine JSON now carries `protocol` and `protocol_version` fields
 - Registry schema adds `capabilities` and `pricing` fields per server
@@ -46,7 +46,7 @@ The reference implementation `drafts.js` does not yet match the API surface that
 - `POST /drafts/api/merge/<project>` — merge agent branch into main
 - `POST /drafts/api/rotate` — rotate compromised pass
 - Capability vocabulary introduced (§5.1 of SPEC): static, media, git, github-sync, plus reserved sql, vector, runtime, llm, gpu, video-gen
-- Recommended per-IP rate limits on `/drafts/pass/*` (30/min, 100/day) and `/drafts/api/*` (60/min) in addition to per-token limits
+- Recommended per-IP rate limits on `/signin/*` (30/min, 100/day) and `/drafts/api/*` (60/min) in addition to per-token limits
 - Design thesis (§0 of SPEC): quantized 7B local model as conformance target
 
 ### Documentation
