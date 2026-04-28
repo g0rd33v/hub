@@ -6,7 +6,7 @@ drafts is under active development. This document describes the intended traject
 
 ## 0.2 — shipped April 2026
 
-Core protocol with three-tier passes, canonical welcome URL, portable token format, federation registry, GitHub sync. Reference server operating at beta.labs.vc as federation member 0.
+Core protocol with three-tier passes, canonical welcome URL, portable token format, federation registry, GitHub sync. Reference server operating at hub.labs.co as federation member 0.
 
 ---
 

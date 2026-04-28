@@ -4,7 +4,7 @@
 > Think Google Docs, but for the agent era.
 
 [![Protocol](https://img.shields.io/badge/protocol-drafts%2F0.2-blue)](docs/SPEC.md)
-[![Reference server](https://img.shields.io/badge/reference-beta.labs.vc-brightgreen)](https://beta.labs.vc/)
+[![Reference server](https://img.shields.io/badge/reference-hub.labs.co-brightgreen)](https://hub.labs.co/)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 AI artifacts today are dead ends. Static one-shots — generated, downloaded, stuck. A third party can't extend them. They don't interact. They can't be forked, remixed, or reused. The next conversation forgets they exist.
@@ -91,7 +91,7 @@ Capability-bundled passes (GPU, video-gen, RAG) are sold separately and priced h
 
 This repository contains the reference drafts server, operated by [Labs](https://labs.vc) as federation member `0` at:
 
-**https://beta.labs.vc/drafts/**
+**https://hub.labs.co/drafts/**
 
 Stack: Node.js 18+ (Express 4), nginx 1.24 (TLS via Let's Encrypt), per-project git repos.
 

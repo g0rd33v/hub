@@ -6,8 +6,8 @@ Drafts protocol, Telepath master bot, the wizapp and buffer projects, and the
 new-server bootstrap all live here together. They are tested as one set,
 released as one set, and propagated downstream from here.
 
-This repo is the upstream. Production servers (`drafts.labs.vc`, future
-`drafts2.labs.vc`, ...) pull from hub. Hub does not pull from them.
+This repo is the upstream. Production servers (`hub.labs.co`, future
+`hub.labs.co`, ...) pull from hub. Hub does not pull from them.
 
 ## Layout
 
@@ -93,13 +93,13 @@ Not in hub:
 
 | Component   | Source of truth | Production       |
 | ----------- | --------------- | ---------------- |
-| drafts      | `hub/drafts/`   | drafts.labs.vc   |
-| telepath    | `hub/drafts/telepath.js` | drafts.labs.vc |
-| wizapp      | `hub/projects/wizapp/` | drafts.labs.vc |
-| buffer      | `hub/projects/buffer/` | drafts.labs.vc |
+| drafts      | `hub/drafts/`   | hub.labs.co   |
+| telepath    | `hub/drafts/telepath.js` | hub.labs.co |
+| wizapp      | `hub/projects/wizapp/` | hub.labs.co |
+| buffer      | `hub/projects/buffer/` | hub.labs.co |
 | setup       | `hub/setup/`    | new servers      |
 
-Server 1 = `drafts.labs.vc` (live, v1.0). Server 2 = `drafts2.labs.vc` (in provisioning).
+Server 1 = `hub.labs.co` (live, v1.0). Server 2 = `hub.labs.co` (in provisioning).
 
 ## License
 

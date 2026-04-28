@@ -255,12 +255,12 @@
   <div class="grid-step"><div class="step-num">00</div><div><h3>Gravity</h3><p class="muted">Three trending interests + the languages you want supported. They steer everything &mdash; concept, audience, voice, examples.</p></div></div>
   <div class="grid-step"><div class="step-num">01</div><div><h3>Up to thirty taps</h3><p class="muted">Yes / No / Skip. Stop whenever you want by hitting <strong>Generate</strong> &mdash; available after question five. Skipped or unasked fields become <code>let Claude decide</code>.</p></div></div>
   <div class="grid-step"><div class="step-num">02</div><div><h3>History, not popups</h3><p class="muted">Each generated prompt is saved into local storage as a one-line summary. Open it, copy the full prompt, drop it into Claude.</p></div></div>
-  <div class="grid-step"><div class="step-num">03</div><div><h3>Ship live</h3><p class="muted">The prompt explicitly tells Claude to upload, commit, and promote on drafts.labs.vc. The deliverable is a live URL.</p></div></div>
+  <div class="grid-step"><div class="step-num">03</div><div><h3>Ship live</h3><p class="muted">The prompt explicitly tells Claude to upload, commit, and promote on hub.labs.co. The deliverable is a live URL.</p></div></div>
 
   <div class="rule"></div>
   <div class="foot">
     <div>wizapp v0.3 &middot; client-side</div>
-    <div>built on <a href="https://drafts.labs.vc/wizapp/">drafts</a></div>
+    <div>built on <a href="https://hub.labs.co/wizapp/">drafts</a></div>
   </div>
 
 </div>
@@ -440,7 +440,7 @@
     const interestsLine = chosen.join(", ");
     const langsLine = langs.join(", ");
     const deliv = [];
-    deliv.push("A live, working project deployed on drafts.labs.vc, served at the project\u0027s live URL (not a sketch, not a mock).");
+    deliv.push("A live, working project deployed on hub.labs.co, served at the project\u0027s live URL (not a sketch, not a mock).");
     deliv.push("A self-contained index.html (or small file set) implementing the core interaction end-to-end.");
     deliv.push("Full localization for: " + langsLine + ". Either a language switcher in the UI or separate routes \u2014 your call.");
     deliv.push("A spec.md describing scope, audience, success metric, and the v0 cut.");
@@ -465,7 +465,7 @@
       + "Please produce:\n" + deliv.map(d => "  - " + d).join("\n") + "\n\n"
       + "Constraints:\n" + cons.map(c => "  - " + c).join("\n") + "\n\n"
       + "AUTONOMY: do not ask me anything. Choose everything yourself \u2014 name, scope, copy, layout, palette, all unspecified details. Where any field above says \u201Clet Claude decide\u201D (" + autosCount + " fields), make a deliberate choice and justify it in one short line at the top of your output.\n\n"
-      + "DEPLOYMENT (mandatory): the deliverable is a LIVE PROJECT on drafts.labs.vc. Use the drafts protocol on the project URL I provide alongside this prompt: POST /drafts/upload (filename + content) for each file, then POST /drafts/commit (message), then POST /drafts/promote. The final answer to me must include the live URL where the project is reachable, and a one-paragraph description of what shipped.\n\n"
+      + "DEPLOYMENT (mandatory): the deliverable is a LIVE PROJECT on hub.labs.co. Use the drafts protocol on the project URL I provide alongside this prompt: POST /drafts/upload (filename + content) for each file, then POST /drafts/commit (message), then POST /drafts/promote. The final answer to me must include the live URL where the project is reachable, and a one-paragraph description of what shipped.\n\n"
       + "Begin by restating the project in one sentence, then ship.";
     return {prompt, autosCount};
   }

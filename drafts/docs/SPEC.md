@@ -479,7 +479,7 @@ Schema: see [`drafts-registry.json`](../drafts-registry.json) for the live docum
 
 ### 6.2 Server numbers
 
-Server `0` is reserved for the canonical reference server operated by Labs at `beta.labs.vc` **and** is the default for any local/unregistered install. Local servers operate under `0` indefinitely without registration; their tokens are valid only against their own host. Other non-negative integers are assigned first-come via PR to this repository's `drafts-registry.json`. Once assigned, a number MUST NOT be reassigned even if a server shuts down.
+Server `0` is reserved for the canonical reference server operated by Labs at `hub.labs.co` **and** is the default for any local/unregistered install. Local servers operate under `0` indefinitely without registration; their tokens are valid only against their own host. Other non-negative integers are assigned first-come via PR to this repository's `drafts-registry.json`. Once assigned, a number MUST NOT be reassigned even if a server shuts down.
 
 ---
 

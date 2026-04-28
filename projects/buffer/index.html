@@ -125,7 +125,7 @@ footer a{color:var(--mute)}
 <symbol id="ic-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
 </defs></svg>
 <div class="wrap">
-  <header class="brand"><span class="dot"></span><span>buffer · drafts.labs.vc</span></header>
+  <header class="brand"><span class="dot"></span><span>buffer · hub.labs.co</span></header>
   <h1>A small folder for moving things between websites.</h1>
   <p class="lead">You save a copy on one website. You read it on another. The buffer is just a folder in between. No sign‑in, no clutter, nothing to learn.</p>
 
@@ -146,7 +146,7 @@ footer a{color:var(--mute)}
   <h2>How to use it</h2>
   <ol class="steps">
     <li><div><div class="t">Open the Claude extension on any website.</div><div class="h">Click the extension icon, or use the keyboard shortcut.</div></div></li>
-    <li><div><div class="t">Drop the buffer link in the chat.</div><div class="h">Paste <code>https://drafts.labs.vc/buffer/</code> once. Claude picks an open folder and remembers it for this session.</div></div></li>
+    <li><div><div class="t">Drop the buffer link in the chat.</div><div class="h">Paste <code>https://hub.labs.co/buffer/</code> once. Claude picks an open folder and remembers it for this session.</div></div></li>
     <li><div><div class="t">Say what you want.</div><div class="h">"Save this page here." "Save my selection." "Read what's in the buffer and paste it into this form."</div></div></li>
   </ol>
 
@@ -227,7 +227,7 @@ footer a{color:var(--mute)}
         <li><code>latest.txt</code> / <code>latest.html</code> — a copy of the most recent file under a stable name.</li>
         <li>Anything else the session has saved, with original filenames preserved.</li>
       </ul>
-      <p>Write API: <code>POST https://drafts.labs.vc/drafts/upload</code> with body <code>{filename, content}</code>. The folder name is also the write key — the session uses it, the session keeps it.</p>
+      <p>Write API: <code>POST https://hub.labs.co/drafts/upload</code> with body <code>{filename, content}</code>. The folder name is also the write key — the session uses it, the session keeps it.</p>
       <p>See <a href="./protocol.md">protocol.md</a> for the full short list of verbs.</p>
     </div>
   </details>

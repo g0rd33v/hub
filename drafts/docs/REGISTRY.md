@@ -9,7 +9,7 @@ The drafts protocol uses a federated registry. Each server in the federation has
 
 ## Server numbers
 
-Server `0` is the canonical reference server operated by Labs at `beta.labs.vc` **and** the default for any local/unregistered install. Every fresh install starts as server `0` and works fine that way — tokens are scoped to the issuing host, so there is no collision. Numbers `1, 2, 3, …` are assigned first-come via PR. Once assigned, a number is never reassigned, even if the server shuts down.
+Server `0` is the canonical reference server operated by Labs at `hub.labs.co` **and** the default for any local/unregistered install. Every fresh install starts as server `0` and works fine that way — tokens are scoped to the issuing host, so there is no collision. Numbers `1, 2, 3, …` are assigned first-come via PR. Once assigned, a number is never reassigned, even if the server shuts down.
 
 You only need a public server number if you want third-party tooling, registries, or other drafts servers to recognize your tokens by their `_<n>_` segment without having seen your host first. For most internal or single-tenant uses, staying on `0` is fine.
 
@@ -59,12 +59,12 @@ Add to `servers` in `drafts-registry.json`:
 
 ## Canonical reference server
 
-Server `0` is operated by Labs at `beta.labs.vc`. It serves as:
+Server `0` is operated by Labs at `hub.labs.co`. It serves as:
 
 - Reference implementation (this repository's `drafts.js`)
 - Test harness for conformance checks
 - The default identity for any unregistered local install
 
-Note: registry PRs merge against this repository, but the registry itself is not served by `beta.labs.vc` or any individual drafts server. There is exactly one source of truth, and it is the file in `main` of this repository.
+Note: registry PRs merge against this repository, but the registry itself is not served by `hub.labs.co` or any individual drafts server. There is exactly one source of truth, and it is the file in `main` of this repository.
 
 Questions: [GitHub Issues](https://github.com/g0rd33v/drafts-protocol/issues).

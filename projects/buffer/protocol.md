@@ -21,7 +21,7 @@ That is the whole interface.
 
 ## When a session starts
 
-1. The user pastes `https://drafts.labs.vc/buffer/` into the Claude extension chat.
+1. The user pastes `https://hub.labs.co/buffer/` into the Claude extension chat.
 2. Claude fetches `/buffer/manifest.json` and finds the first folder with state `open`.
 3. Claude marks that folder as `in use` by writing `state.json` to it.
 4. Claude tells the user the folder name in plain text, e.g. *"Using folder ab3kf02p1q."*
@@ -31,7 +31,7 @@ If every folder is in use, Claude tells the user and waits.
 
 ## Save here (write)
 
-Endpoint: `POST https://drafts.labs.vc/drafts/upload`
+Endpoint: `POST https://hub.labs.co/drafts/upload`
 Body (JSON): `{ "filename": "folders/<name>/<file>", "content": "<text or base64>" }`
 Header: `Authorization: Bearer <folder-name>`
 
