@@ -366,8 +366,8 @@ async function answerCallback(token, callbackId, opts = {}) {
 function readMeta(projectName) {
   const fallback = {
     title: projectName,
-    short_description: 'A project on Drafts',
-    description: 'Built with Drafts. Visit ' + PUBLIC_BASE + '/' + projectName + '/',
+    short_description: 'Created and managed with Hub.',
+    description: 'Created and managed with Hub. Visit ' + PUBLIC_BASE + '/' + projectName + '/',
   };
   try {
     const livePath = path.join(process.env.DRAFTS_DIR || '/var/lib/drafts', projectName, 'live', 'index.html');
@@ -469,9 +469,10 @@ async function handleDefaultModeUpdate(project, upd) {
       const html =
         '<b>' + escHtml(meta.title) + '</b>\n\n' +
         escHtml(meta.short_description) + '\n\n' +
-        'Tap the menu button to open the app, or visit:\n' +
         '<a href="' + escHtml(liveUrl) + '">' + escHtml(liveUrl) + '</a>\n\n' +
-        '<i>You\'ll receive updates from this project. Send /stop anytime to opt out.</i>';
+        '<i>Send /stop to unsubscribe.</i>\n\n' +
+        '— — —\n' +
+        'Made with <a href="https://t.me/LabsHubBot">@LabsHubBot</a> · <a href="https://hub.labs.co">hub.labs.co</a>';
       await tgApi(token, 'sendMessage', {
         chat_id: chatId, text: html, parse_mode: 'HTML', disable_web_page_preview: true,
       }).catch(()=>{});
@@ -480,13 +481,14 @@ async function handleDefaultModeUpdate(project, upd) {
     if (text === '/stop' || text === '/stop@' + (project.bot.bot_username || '').toLowerCase()) {
       removeSubscriber(project, fromId);
       await tgApi(token, 'sendMessage', {
-        chat_id: chatId, text: '🔕 Unsubscribed. Send /start to opt back in.',
+        chat_id: chatId, text: 'Unsubscribed. Send /start to opt back in.',
       }).catch(()=>{});
       return;
     }
     await tgApi(token, 'sendMessage', {
       chat_id: chatId,
-      text: 'Hi 👋 Open the menu button to use this app, or send /start to subscribe to updates.',
+      text: 'Send /start to subscribe to updates from this project.\n\n— — —\nMade with @LabsHubBot · hub.labs.co',
+      disable_web_page_preview: true,
     }).catch(()=>{});
   } catch (e) {
     console.error('[project-bot:' + project.name + '] default-mode handle error:', e.message);
