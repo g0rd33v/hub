@@ -42,10 +42,10 @@ let serverHelpers = {};
 
 const STATE_VERSION = 1;
 const POLL_TIMEOUT  = 25;
-const TAP_FILE      = '/etc/labs/drafts.tap';
+const TBP_FILE      = '/etc/labs/drafts.tbp';
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
-let TAP = null;
+let TBP = null;
 let telepathState = null;
 let polling = false;
 let pollOffset = 0;
@@ -111,40 +111,40 @@ function persistState() {
   }
 }
 
-function loadTAP() {
+function loadTBP() {
   try {
-    if (fs.existsSync(TAP_FILE)) {
-      TAP = JSON.parse(fs.readFileSync(TAP_FILE, 'utf8'));
+    if (fs.existsSync(TBP_FILE)) {
+      TBP = JSON.parse(fs.readFileSync(TBP_FILE, 'utf8'));
     }
   } catch (e) {
-    console.error('[telepath] TAP load failed:', e.message);
-    TAP = null;
+    console.error('[telepath] TBP load failed:', e.message);
+    TBP = null;
   }
 }
 
-function persistTAP() {
+function persistTBP() {
   try {
-    fs.mkdirSync(path.dirname(TAP_FILE), { recursive: true });
-    safeWriteJSON(TAP_FILE, TAP || {});
-    fs.chmodSync(TAP_FILE, 0o600);
+    fs.mkdirSync(path.dirname(TBP_FILE), { recursive: true });
+    safeWriteJSON(TBP_FILE, TBP || {});
+    fs.chmodSync(TBP_FILE, 0o600);
   } catch (e) {
-    console.error('[telepath] TAP save failed:', e.message);
+    console.error('[telepath] TBP save failed:', e.message);
   }
 }
 
 export function getControlBotUsername() {
-  return TAP && TAP.bot ? TAP.bot.username : null;
+  return TBP && TBP.bot ? TBP.bot.username : null;
 }
 
 // ─────────────────────────────────────────────────────────────
 // Telegram HTTP client (control-plane bot only)
 // ─────────────────────────────────────────────────────────────
 function tgApi(method, params = {}, opts = {}) {
-  if (!TAP || !TAP.token) return Promise.reject(new Error('no_tap'));
+  if (!TBP || !TBP.token) return Promise.reject(new Error('no_tbp'));
   const body = JSON.stringify(params);
   const reqOpts = {
     hostname: 'api.telegram.org', port: 443,
-    path: `/bot${TAP.token}/${method}`,
+    path: `/bot${TBP.token}/${method}`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     timeout: opts.timeout || 30000,
@@ -184,13 +184,13 @@ function tgSend(chatId, html, opts = {}) {
 // WebApp initData verification
 // ─────────────────────────────────────────────────────────────
 function verifyInitData(initDataRaw) {
-  if (!initDataRaw || !TAP || !TAP.token) return null;
+  if (!initDataRaw || !TBP || !TBP.token) return null;
   const params = new URLSearchParams(initDataRaw);
   const hash = params.get('hash');
   if (!hash) return null;
   params.delete('hash');
   const dataCheckString = [...params.entries()].map(([k,v])=>`${k}=${v}`).sort().join('\n');
-  const secret = crypto.createHmac('sha256', 'WebAppData').update(TAP.token).digest();
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(TBP.token).digest();
   const computed = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
   if (computed !== hash) return null;
   const auth_date = Number(params.get('auth_date') || 0);
@@ -687,7 +687,7 @@ async function pollLoop() {
   if (polling) return;
   polling = true;
   console.log('[telepath] long-polling started');
-  while (polling && TAP && TAP.token) {
+  while (polling && TBP && TBP.token) {
     try {
       const updates = await tgApi('getUpdates', {
         offset: pollOffset, timeout: POLL_TIMEOUT,
@@ -713,11 +713,11 @@ async function pollLoop() {
 function stopPolling() { polling = false; }
 
 async function refreshBotMe() {
-  if (!TAP || !TAP.token) return;
+  if (!TBP || !TBP.token) return;
   try {
     const me = await tgApi('getMe');
-    TAP.bot = { id: me.id, username: me.username, first_name: me.first_name };
-    persistTAP();
+    TBP.bot = { id: me.id, username: me.username, first_name: me.first_name };
+    persistTBP();
   } catch (e) {
     console.error('[telepath] getMe failed:', e.message);
   }
@@ -725,7 +725,7 @@ async function refreshBotMe() {
 
 // v0.8: refreshed bot profile (matches what Telegram API was set to)
 async function configureBotProfile() {
-  if (!TAP || !TAP.token) return;
+  if (!TBP || !TBP.token) return;
   const commands = [
     { command: 'new',      description: '✨ start a project' },
     { command: 'projects', description: '📁 your projects' },
@@ -757,7 +757,7 @@ async function configureBotProfile() {
 // Notification dispatchers
 // ─────────────────────────────────────────────────────────────
 function notifySAPOwners(html) {
-  if (!TAP) return;
+  if (!TBP) return;
   const subs = findUsersBoundToTier('sap').filter(u => u.notif_subscribed);
   for (const u of subs) {
     tgSend(u.tg_user_id, html).catch(e => console.error('[telepath] notify SAP failed:', e.message));
@@ -766,13 +766,13 @@ function notifySAPOwners(html) {
 
 // v0.8: dedicated channel for drafts internal events (boot/version/migration/errors)
 function notifySAPOnDraftsEvent(html) {
-  if (!TAP) return;
+  if (!TBP) return;
   if (!telepathState || !telepathState.settings.notify_sap_on_drafts_event) return;
   notifySAPOwners(html);
 }
 
 function notifyPAPOwners(projectName, html) {
-  if (!TAP) return;
+  if (!TBP) return;
   const subs = Object.values(telepathState.users).filter(u =>
     u.notif_subscribed && u.bindings.some(b => b.tier === 'pap' && b.project_name === projectName)
   );
@@ -818,42 +818,42 @@ function onSchemaMigration(description) {
 // HTTP routes
 // ─────────────────────────────────────────────────────────────
 function mountRoutes(app) {
-  // ── TAP management (control bot) ──
-  app.get('/drafts/tap', requireSAP, (req, res) => {
-    if (!TAP) return res.json({ ok: true, installed: false });
-    res.json({ ok: true, installed: true, bot: TAP.bot || null, installed_at: TAP.installed_at || null, polling });
+  // ── TBP management (control bot) ──
+  app.get('/drafts/tbp', requireSAP, (req, res) => {
+    if (!TBP) return res.json({ ok: true, installed: false });
+    res.json({ ok: true, installed: true, bot: TBP.bot || null, installed_at: TBP.installed_at || null, polling });
   });
 
-  app.put('/drafts/tap', requireSAP, async (req, res) => {
+  app.put('/drafts/tbp', requireSAP, async (req, res) => {
     const token = String(req.body.token || '').trim();
     if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(token)) {
       return res.status(400).json({ ok: false, error: 'invalid_token_format' });
     }
-    const oldTAP = TAP;
-    TAP = { token };
+    const oldTBP = TBP;
+    TBP = { token };
     try {
       const me = await tgApi('getMe');
-      TAP = { token, bot: { id: me.id, username: me.username, first_name: me.first_name }, installed_at: now() };
-      persistTAP();
+      TBP = { token, bot: { id: me.id, username: me.username, first_name: me.first_name }, installed_at: now() };
+      persistTBP();
       stopPolling();
       await sleep(500);
       pollLoop();
       configureBotProfile().catch(()=>{});
-      res.json({ ok: true, bot: TAP.bot });
+      res.json({ ok: true, bot: TBP.bot });
     } catch (e) {
-      TAP = oldTAP;
+      TBP = oldTBP;
       res.status(400).json({ ok: false, error: 'token_rejected_by_telegram', detail: e.message });
     }
   });
 
-  app.delete('/drafts/tap', requireSAP, (req, res) => {
+  app.delete('/drafts/tbp', requireSAP, (req, res) => {
     stopPolling();
-    TAP = null;
-    try { fs.unlinkSync(TAP_FILE); } catch (e) {}
+    TBP = null;
+    try { fs.unlinkSync(TBP_FILE); } catch (e) {}
     res.json({ ok: true, removed: true });
   });
 
-  app.put('/drafts/tap/settings', requireSAP, (req, res) => {
+  app.put('/drafts/tbp/settings', requireSAP, (req, res) => {
     const allowed = [
       'notify_sap_on_new_project',
       'notify_sap_on_new_pap',
@@ -866,7 +866,7 @@ function mountRoutes(app) {
     res.json({ ok: true, settings: telepathState.settings });
   });
 
-  app.post('/drafts/tap/configure', requireSAP, async (req, res) => {
+  app.post('/drafts/tbp/configure', requireSAP, async (req, res) => {
     try { await configureBotProfile(); res.json({ ok: true }); }
     catch (e) { res.status(500).json({ ok: false, error: e.message }); }
   });
@@ -1837,8 +1837,8 @@ export function initTelepath(opts) {
   serverHelpers = opts.serverHelpers || {};
 
   loadState();
-  loadTAP();
-  if (TAP && TAP.token) {
+  loadTBP();
+  if (TBP && TBP.token) {
     refreshBotMe().then(() => {
       configureBotProfile().catch(()=>{});
       pollLoop();
@@ -1846,7 +1846,7 @@ export function initTelepath(opts) {
     if (botMeRefreshTimer) clearInterval(botMeRefreshTimer);
     botMeRefreshTimer = setInterval(refreshBotMe, 6 * 3600 * 1000);
   } else {
-    console.log('[telepath] no TAP installed — bot inactive. Install via PUT /drafts/tap');
+    console.log('[telepath] no TBP installed — bot inactive. Install via PUT /drafts/tbp');
   }
 }
 
@@ -1865,8 +1865,8 @@ export const hooks = {
 
 export function getTelepathStatus() {
   return {
-    installed: !!(TAP && TAP.token),
-    bot: TAP ? TAP.bot : null,
+    installed: !!(TBP && TBP.token),
+    bot: TBP ? TBP.bot : null,
     polling,
     users_count: telepathState ? Object.keys(telepathState.users).length : 0,
   };

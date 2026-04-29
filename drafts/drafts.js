@@ -61,7 +61,7 @@ const CHROME_EXT_URL  = 'https://chromewebstore.google.com/detail/claude-for-chr
 
 const RESERVED_NAMES = new Set([
   'drafts', 'live', 'api', 'pass', 'v', 'version', 'versions',
-  'health', 'whoami', 'projects', 'aaps', 'aap', 'pap', 'sap', 'tap',
+  'health', 'whoami', 'projects', 'aaps', 'aap', 'pap', 'sap', 'tbp',
   'static', 'assets', 'admin', 'www', '_', 'config', 'github',
   'upload', 'commit', 'promote', 'rollback', 'pending', 'merge',
   'files', 'file', 'history', 'about', 'gallery', 'docs', 'telepath',
@@ -788,11 +788,11 @@ function telepathSectionSAP(tpStatus, apiBase) {
   let statusBlock;
   if (installed) {
     statusBlock = '<div class="info-row">' + I.bot + '<div class="text">Master bot connected: <strong style="color:#4ade80">@' + esc(tpStatus.bot.username) + '</strong>. Polling: <strong>' + (tpStatus.polling?'on':'off') + '</strong>. Open <a href="https://t.me/' + esc(tpStatus.bot.username) + '" target="_blank">@' + esc(tpStatus.bot.username) + '</a> in Telegram, send <code>/start</code> to begin. Inside the bot, <code>/projects</code> lists everything on this server.</div></div>' +
-      '<form class="inline" onsubmit="return false"><button class="btn" type="button" id="tap-revoke-btn">Revoke master bot</button></form>';
+      '<form class="inline" onsubmit="return false"><button class="btn" type="button" id="tbp-revoke-btn">Revoke master bot</button></form>';
   } else {
     statusBlock =
-      '<form class="inline" id="tap-form" onsubmit="return false"><input type="password" id="tap-token-input" placeholder="1234567890:AA... (paste from @BotFather)"/><button class="btn primary" type="button" id="tap-install-btn">Connect master bot</button></form>' +
-      '<div class="status-line" id="tap-status">Need a bot first? Open <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, send <code>/newbot</code>, paste the token above.</div>';
+      '<form class="inline" id="tbp-form" onsubmit="return false"><input type="password" id="tbp-token-input" placeholder="1234567890:AA... (paste from @BotFather)"/><button class="btn primary" type="button" id="tbp-install-btn">Connect master bot</button></form>' +
+      '<div class="status-line" id="tbp-status">Need a bot first? Open <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, send <code>/newbot</code>, paste the token above.</div>';
   }
   return `
 <div class="divider"></div>
@@ -911,7 +911,7 @@ function buildAgentPlaybook(tier, project, apiBase, token) {
       common_tasks: [
         { goal: 'List projects', call: 'GET ' + apiBase + '/projects' },
         { goal: 'Create project', call: 'POST ' + apiBase + '/projects {name, description}' },
-        { goal: 'Install master bot', call: 'PUT ' + apiBase + '/tap {token}' },
+        { goal: 'Install master bot', call: 'PUT ' + apiBase + '/tbp {token}' },
         { goal: 'Server stats', call: 'GET ' + apiBase + '/server/stats' },
       ],
     };
@@ -1127,9 +1127,9 @@ function renderPage({ tier, token, project, aap, versions = [] }) {
   html += 'var cb=document.getElementById("v95-copy");if(cb)cb.addEventListener("click",function(){navigator.clipboard.writeText(cb.dataset.portable);cb.textContent="Copied ";setTimeout(function(){cb.textContent="Copy this link"},1500)});';
   // Bot attach (PAP)
   html += 'var ba=document.getElementById("bot-attach-btn");if(ba)ba.addEventListener("click",function(){var tk=document.getElementById("bot-token-input").value.trim();if(!tk){st("bot-attach-status","token required","err");return}st("bot-attach-status","attaching...");fetch(API+"/project/bot",{method:"PUT",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({token:tk})}).then(function(r){return r.json()}).then(function(d){if(d.ok){st("bot-attach-status","attached: @"+(d.bot&&d.bot.bot_username),"ok");setTimeout(function(){location.reload()},900)}else st("bot-attach-status","error: "+(d.detail||d.error),"err")})});';
-  // TAP install (SAP)
-  html += 'var ti=document.getElementById("tap-install-btn");if(ti)ti.addEventListener("click",function(){var tk=document.getElementById("tap-token-input").value.trim();if(!/^\\d+:[A-Za-z0-9_-]{30,}$/.test(tk)){st("tap-status","invalid token format","err");return}st("tap-status","verifying...");fetch(API+"/tap",{method:"PUT",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({token:tk})}).then(function(r){return r.json()}).then(function(j){if(j.ok){st("tap-status","connected as @"+j.bot.username,"ok");setTimeout(function(){location.reload()},1200)}else st("tap-status","failed: "+(j.detail||j.error),"err")})});';
-  html += 'var tr=document.getElementById("tap-revoke-btn");if(tr)tr.addEventListener("click",function(){if(!confirm("Revoke master bot?"))return;fetch(API+"/tap",{method:"DELETE",headers:{"Authorization":"Bearer "+T}}).then(function(){location.reload()})});';
+  // TBP install (SAP)
+  html += 'var ti=document.getElementById("tbp-install-btn");if(ti)ti.addEventListener("click",function(){var tk=document.getElementById("tbp-token-input").value.trim();if(!/^\\d+:[A-Za-z0-9_-]{30,}$/.test(tk)){st("tbp-status","invalid token format","err");return}st("tbp-status","verifying...");fetch(API+"/tbp",{method:"PUT",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({token:tk})}).then(function(r){return r.json()}).then(function(j){if(j.ok){st("tbp-status","connected as @"+j.bot.username,"ok");setTimeout(function(){location.reload()},1200)}else st("tbp-status","failed: "+(j.detail||j.error),"err")})});';
+  html += 'var tr=document.getElementById("tbp-revoke-btn");if(tr)tr.addEventListener("click",function(){if(!confirm("Revoke master bot?"))return;fetch(API+"/tbp",{method:"DELETE",headers:{"Authorization":"Bearer "+T}}).then(function(){location.reload()})});';
   // Upload
   html += 'var up=document.getElementById("v95-up");if(up)up.addEventListener("click",async function(){var fi=document.getElementById("v95-files");var files=fi.files;if(!files||!files.length){st("v95-status","pick at least one file","err");return}var doCommit=document.getElementById("v95-commit").checked;var pEl=document.getElementById("v95-promote");var doPromote=pEl&&pEl.checked;st("v95-status","uploading 0/"+files.length+"...");for(var i=0;i<files.length;i++){var f=files[i];try{var b64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(",")[1])};r.onerror=function(){rej(r.error)};r.readAsDataURL(f)});var rsp=await fetch(API+"/upload",{method:"POST",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({filename:f.name,content_b64:b64})});var jd=await rsp.json();if(!jd.ok){st("v95-status","failed on "+f.name+": "+jd.error,"err");return}st("v95-status","uploaded "+(i+1)+"/"+files.length+": "+f.name)}catch(e){st("v95-status","error: "+e.message,"err");return}}if(doCommit){var cr=await fetch(API+"/commit",{method:"POST",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({message:"upload: "+files.length+" file(s)"})}).then(function(r){return r.json()});if(!cr.ok){st("v95-status","commit failed: "+cr.error,"err");return}}if(doPromote){var pr=await fetch(API+"/promote",{method:"POST",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:JSON.stringify({})}).then(function(r){return r.json()});if(!pr.ok){st("v95-status","promote failed: "+pr.error,"err");return}st("v95-status","uploaded + committed + promoted ","ok")}else if(doCommit){st("v95-status","uploaded + committed ","ok")}else{st("v95-status","uploaded ","ok")}fi.value=""});';
   // Autopilot
@@ -1153,12 +1153,13 @@ async function welcomeRoute(req, res) {
   }
   let tier;
   // New format: pass_<N>_<role>_<hex>
-  const newFmt = token.match(/^pass_(\d+)_(server|project|agent)_([a-f0-9]+)$/i);
+  const newFmt = token.match(/^pass_(\d+)_([a-z][a-z0-9]*)_(.+)$/);
   if (newFmt) {
     const role = newFmt[2];
     if (role === 'server') tier = 'sap';
     else if (role === 'project') { tier = 'pap'; token = 'pap_' + newFmt[3]; }
     else if (role === 'agent') { tier = 'aap'; token = 'aap_' + newFmt[3]; }
+    else { tier = 'service:' + role; token = newFmt[3]; }
   } else if (token.startsWith("pap_")) tier = "pap";
   else if (token.startsWith("aap_")) tier = "aap";
   else if (/^[0-9a-f]{12,64}$/i.test(token)) tier = "sap";
