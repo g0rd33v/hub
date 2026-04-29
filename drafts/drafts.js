@@ -1,7 +1,7 @@
 // drafts v0.8 — Three-tier access model + Telepath + Project Bots + Per-project analytics + SAP drafts-event notifications.
 //
 // v0.8 adds:
-//   - SAP-event notifications (boot, version bump, schema migration, errors) via telepathHooks
+//   - SAP-event notifications (boot, version bump, schema migration, errors) via telegramHooks
 //   - Persisted last_known_version in state for version-bump detection
 //   - GitHub auto-sync setting per project (auto-pushes to GitHub on every commit)
 //
@@ -25,7 +25,7 @@ import crypto from 'crypto';
 import { execSync } from 'child_process';
 import dotenv from 'dotenv';
 import { buildRichContext } from "./rich-context.js";
-import { initTelepath, mountTelepathRoutes, hooks as telepathHooks, getTelepathStatus } from "./telepath.js";
+import { initTelegram, mountTelegramRoutes, hooks as telegramHooks, getTelegramStatus } from "./telegram.js";
 import * as runtime from './runtime.js';
 import { initProjectBots, projectBotsApi } from "./project-bots.js";
 import { startDailySnapshotScheduler } from "./analytics.js";
@@ -33,10 +33,10 @@ import { startDailySnapshotScheduler } from "./analytics.js";
 const VERSION = '1.0.0';
 
 // v0.9.4: detect telepath.js  when present, every project gets bot management automatically
-const TELEPATH_AVAILABLE = (() => {
+const TELEGRAM_AVAILABLE = (() => {
   try {
     const here = path.dirname(new URL(import.meta.url).pathname);
-    return fs.existsSync(path.join(here, 'telepath.js'));
+    return fs.existsSync(path.join(here, 'telegram.js'));
   } catch (e) { return true; }
 })();
 
@@ -114,7 +114,7 @@ function migrateProjectBotsToV06() {
   if (changed > 0) {
     saveState();
     console.log(`[drafts] migrated ${changed} bot field(s) to v0.6 schema`);
-    setTimeout(() => { try { telepathHooks.onSchemaMigration(`v0.6 bot schema: ${changed} field(s) added`); } catch (e) {} }, 5000);
+    setTimeout(() => { try { telegramHooks.onSchemaMigration(`v0.6 bot schema: ${changed} field(s) added`); } catch (e) {} }, 5000);
   }
 }
 migrateProjectBotsToV06();
@@ -128,7 +128,7 @@ function migrateProjectsToV08() {
   if (changed > 0) {
     saveState();
     console.log(`[drafts] migrated ${changed} project(s) to v0.8 schema (github_autosync default false)`);
-    setTimeout(() => { try { telepathHooks.onSchemaMigration(`v0.8 schema: ${changed} project(s) got github_autosync field`); } catch (e) {} }, 5000);
+    setTimeout(() => { try { telegramHooks.onSchemaMigration(`v0.8 schema: ${changed} project(s) got github_autosync field`); } catch (e) {} }, 5000);
   }
 }
 migrateProjectsToV08();
@@ -208,7 +208,7 @@ async function _createProjectInternal({ name, description = '', github_repo = nu
     live_url: `${PUBLIC_BASE}/${name}/`,
     raw: proj,
   };
-  try { telepathHooks.onNewProject(proj); } catch (e) {}
+  try { telegramHooks.onNewProject(proj); } catch (e) {}
   return out;
 }
 
@@ -443,7 +443,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health
 app.get('/drafts/health', (req, res) => {
-  const tp = getTelepathStatus();
+  const tp = getTelegramStatus();
   const projectBotsCount = state.projects.filter(p => p.bot && p.bot.token).length;
   const webhookBotsCount = state.projects.filter(p => p.bot && p.bot.token && p.bot.webhook_url).length;
   const analyticsEnabledCount = state.projects.filter(p => p.bot && p.bot.token && p.bot.analytics_enabled !== false).length;
@@ -453,9 +453,9 @@ app.get('/drafts/health', (req, res) => {
     version: VERSION,
     protocol: 'drafts',
     server_number: SERVER_NUMBER,
-    telepath_available: TELEPATH_AVAILABLE,
+    telegram_available: TELEGRAM_AVAILABLE,
     runtime_capability: true,
-    project_bots_capability: TELEPATH_AVAILABLE,
+    project_bots_capability: TELEGRAM_AVAILABLE,
     telepath: tp,
     project_bots: { total: projectBotsCount, in_webhook_mode: webhookBotsCount, analytics_enabled: analyticsEnabledCount },
     github_autosync_enabled: githubAutosyncCount,
@@ -463,7 +463,7 @@ app.get('/drafts/health', (req, res) => {
   });
 });
 
-mountTelepathRoutes(app);
+mountTelegramRoutes(app);
 
 // =================================================================
 // drafts v0.9.5  buffer-style welcome pages (SAP/PAP/AAP)
@@ -925,7 +925,7 @@ function buildAgentPlaybook(tier, project, apiBase, token) {
       { goal: 'Mint AAP', call: 'POST ' + apiBase + '/aaps {name}' },
       { goal: 'Merge AAP', call: 'POST ' + apiBase + '/merge {aap_id}' },
     ];
-    if (TELEPATH_AVAILABLE) {
+    if (TELEGRAM_AVAILABLE) {
       tasks.push(
         { goal: 'Bot status', call: 'GET ' + apiBase + '/project/bot' },
         { goal: 'Attach bot', call: 'PUT ' + apiBase + '/project/bot {token}' },
@@ -940,11 +940,11 @@ function buildAgentPlaybook(tier, project, apiBase, token) {
         'Workflow: upload  commit  promote.',
         'Each commit on main is an immutable snapshot at /v/<N>/.',
         'Mint AAPs for collaborators; never share PAP.',
-        ...(TELEPATH_AVAILABLE ? ['Telepath available: every project can attach its own Telegram bot via bot.json.'] : []),
+        ...(TELEGRAM_AVAILABLE ? ['Telepath available: every project can attach its own Telegram bot via bot.json.'] : []),
       ],
       common_tasks: tasks,
       build_loop: 'Plan  upload  commit  promote  verify live  iterate.',
-      bot_json_schema: TELEPATH_AVAILABLE ? {
+      bot_json_schema: TELEGRAM_AVAILABLE ? {
         notes: 'Place bot.json at project root. After upload + commit + promote, call POST /drafts/project/bot/sync.',
         example: {
           version: 'drafts.bot.v1',
@@ -988,7 +988,7 @@ function renderPage({ tier, token, project, aap, versions = [] }) {
   const tierWord = isPAP ? 'project' : isAAP ? 'agent' : 'server';
   const cleanTok = token.replace(/^(pap|aap)_/, '');
   const portableId = `${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_${tierWord}_${cleanTok}`;
-  const tpStatus = getTelepathStatus();
+  const tpStatus = getTelegramStatus();
   const playbook = buildAgentPlaybook(tier, project, apiBase, token);
   const hero = heroContent(tier, project, versions, PUBLIC_BASE);
   const steps = stepsForTier(tier, project, apiBase);
@@ -1003,7 +1003,7 @@ function renderPage({ tier, token, project, aap, versions = [] }) {
     portable_identifier: portableId,
     server_number: SERVER_NUMBER,
     telepath: tpStatus.installed ? { bot_username: tpStatus.bot && tpStatus.bot.username, polling: tpStatus.polling } : { installed: false },
-    telepath_available: TELEPATH_AVAILABLE,
+    telegram_available: TELEGRAM_AVAILABLE,
     runtime_capability: true,
     url_scheme: project ? {
       live: `${PUBLIC_BASE}/${project.name}/`,
@@ -1199,7 +1199,7 @@ app.get('/drafts/server/stats', authSAP, (req, res) => {
   res.json({
     ok: true, server_number: SERVER_NUMBER, total_projects: state.projects.length,
     github_default_configured: !!(state.github_default && state.github_default.token),
-    telepath: getTelepathStatus(),
+    telepath: getTelegramStatus(),
     projects: state.projects.map(p => ({
       name: p.name, created_at: p.created_at,
       aap_count: (p.aaps || []).filter(a => !a.revoked).length,
@@ -1332,10 +1332,10 @@ app.get('/drafts/project/versions', authAny, async (req, res) => {
 });
 
 
-// v0.9.4: Project bot management endpoints (gated on TELEPATH_AVAILABLE)
+// v0.9.4: Project bot management endpoints (gated on TELEGRAM_AVAILABLE)
 function requireBotCapability(req, res) {
-  if (!TELEPATH_AVAILABLE) {
-    res.status(501).json({ ok: false, error: 'bot_capability_unavailable', detail: 'telepath.js not present on this server' });
+  if (!TELEGRAM_AVAILABLE) {
+    res.status(501).json({ ok: false, error: 'bot_capability_unavailable', detail: 'telegram.js not present on this server' });
     return false;
   }
   return true;
@@ -1442,7 +1442,7 @@ app.post('/drafts/aaps', authPAPorSAP, async (req, res) => {
   const p = req.project || findProjectByName(sanitizeName(req.body.project || ''));
   if (!p) return res.status(400).json({ ok: false, error: 'no_project_context' });
   const out = await _createAAPInternal(p, { name: req.body.name });
-  try { telepathHooks.onNewAAPCreated(p, out.aap); } catch (e) {}
+  try { telegramHooks.onNewAAPCreated(p, out.aap); } catch (e) {}
   res.json({
     ok: true,
     aap: out.aap,
@@ -1511,7 +1511,7 @@ app.post('/drafts/merge', authPAPorSAP, async (req, res) => {
     await git.checkout('main');
     await git.merge([`aap/${aap.id}`, '--no-ff', '-m', `merge aap/${aap.name || aap.id}`]);
     const N = await materializeVersion(p.name);
-    try { telepathHooks.onAAPMerged(p, aap, N); } catch (e) {}
+    try { telegramHooks.onAAPMerged(p, aap, N); } catch (e) {}
     // v0.8 autosync
     if (p.github_autosync && p.github_repo) {
       _githubSyncProject(p).catch(e => console.error('[autosync after merge] failed:', e.message));
@@ -1558,7 +1558,7 @@ app.post('/drafts/commit', authAny, async (req, res) => {
     if (branch === 'main' && out.commit) {
       const N = await materializeVersion(p.name);
       versionInfo = { n: N, url: `${PUBLIC_BASE}/${p.name}/v/${N}/` };
-      try { telepathHooks.onMainCommit(p, { commit: out.commit, summary: out.summary, message: msg }, N); } catch (e) {}
+      try { telegramHooks.onMainCommit(p, { commit: out.commit, summary: out.summary, message: msg }, N); } catch (e) {}
       // v0.8 autosync (fire and forget)
       if (p.github_autosync && p.github_repo) {
         _githubSyncProject(p).catch(e => console.error('[autosync after commit] failed:', e.message));
@@ -1871,7 +1871,7 @@ app.listen(PORT, '127.0.0.1', () => {
   console.log(`  data_dir: ${DRAFTS_DIR}`);
   console.log(`  SAP welcome: ${PUBLIC_BASE}/signin/pass_${SERVER_NUMBER}_server_${SAP_TOKEN.slice(0,8)}... (full token in /etc/labs/drafts.sap)`);
 
-  initTelepath({
+  initTelegram({
     draftsDir: DRAFTS_DIR,
     publicBase: PUBLIC_BASE,
     serverNumber: SERVER_NUMBER,
@@ -1907,11 +1907,11 @@ app.listen(PORT, '127.0.0.1', () => {
       const botCount = state.projects.filter(p => p.bot && p.bot.token).length;
       const uptime = Math.floor(process.uptime());
       if (isVersionBump) {
-        telepathHooks.onVersionBump(previousVersion, VERSION, { projectCount, botCount });
+        telegramHooks.onVersionBump(previousVersion, VERSION, { projectCount, botCount });
       } else if (isFirstBoot) {
-        telepathHooks.onDraftsBoot(VERSION, { projectCount, botCount, uptime, firstBoot: true });
+        telegramHooks.onDraftsBoot(VERSION, { projectCount, botCount, uptime, firstBoot: true });
       } else {
-        telepathHooks.onDraftsBoot(VERSION, { projectCount, botCount, uptime, firstBoot: false });
+        telegramHooks.onDraftsBoot(VERSION, { projectCount, botCount, uptime, firstBoot: false });
       }
     } catch (e) {
       console.error('[drafts] boot hook error:', e.message);
