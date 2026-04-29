@@ -980,6 +980,127 @@ function renderAgentPlaybookHTML() { return ''; }
 // =================================================================
 // Main renderPage  buffer-style, single column, long-form
 // =================================================================
+
+// Hub fallback landing — shown when project has no index.html yet.
+// Pure HTML, Atom.me dark theme, SVG icons, no emoji.
+function renderProjectLanding(projectName) {
+  const bot = projectName; // In Hub, project name == bot username
+  const tg = 'https://t.me/' + bot;
+  const hub = 'https://hub.labs.co';
+  const hubBot = 'https://t.me/LabsHubBot';
+  return `<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>@${bot} · Hub</title>
+<meta name="description" content="@${bot} is part of Hub. Make and manage AI agents, bots, apps, games, sites — all from one chat."/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;color:#f5f5f5;font-family:Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding:80px 24px 96px}
+.hero{text-align:center;margin-bottom:96px}
+.hero .at{font-size:14px;letter-spacing:0.18em;color:#666;text-transform:uppercase;font-weight:600;margin-bottom:18px}
+.hero h1{font-size:64px;font-weight:800;letter-spacing:-0.04em;line-height:1;margin-bottom:18px;word-break:break-word}
+.hero .sub{font-size:15px;color:#888;margin-bottom:36px}
+.cta{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#000;padding:16px 28px;border-radius:14px;font-weight:700;font-size:15px;letter-spacing:-0.01em;transition:transform 0.15s ease}
+.cta:hover{transform:translateY(-1px)}
+.cta svg{width:18px;height:18px}
+.section-label{font-size:11px;letter-spacing:0.22em;color:#555;text-transform:uppercase;font-weight:700;margin-bottom:24px;text-align:center}
+.tag{font-size:36px;font-weight:800;letter-spacing:-0.025em;line-height:1.15;margin-bottom:64px;text-align:center;color:#f5f5f5}
+.tag span{color:#666}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:80px}
+.feature{background:#0e0e0e;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:24px}
+.feature .ico{width:28px;height:28px;color:#888;margin-bottom:14px;display:block}
+.feature h3{font-size:15px;font-weight:700;letter-spacing:-0.01em;margin-bottom:6px;color:#f5f5f5}
+.feature p{font-size:13.5px;color:#888;line-height:1.5}
+.bottom{text-align:center;padding-top:48px;border-top:1px solid rgba(255,255,255,0.06)}
+.bottom .links{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
+.bottom a{font-size:14px;font-weight:600;color:#f5f5f5;display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;transition:border-color 0.15s ease}
+.bottom a:hover{border-color:rgba(255,255,255,0.25)}
+.bottom a svg{width:14px;height:14px}
+.foot{font-size:12px;color:#444;letter-spacing:0.02em}
+@media(max-width:520px){
+  .wrap{padding:48px 20px 64px}
+  .hero{margin-bottom:64px}
+  .hero h1{font-size:44px}
+  .tag{font-size:26px;margin-bottom:48px}
+  .features{margin-bottom:56px}
+}
+</style>
+</head><body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="at">Telegram bot</div>
+    <h1>@${bot}</h1>
+    <div class="sub">Created and managed with Hub</div>
+    <a href="${tg}" class="cta">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21.92 4.27a.75.75 0 0 0-.81-.13L2.65 11.7a.75.75 0 0 0 .04 1.4l4.71 1.7 1.81 5.71a.75.75 0 0 0 1.27.27l2.74-2.95 4.71 3.45a.75.75 0 0 0 1.18-.42l3.05-15.92a.75.75 0 0 0-.24-.67Zm-3.97 2.6L9.18 14.5l-4.4-1.59 13.17-5.04ZM10.4 16.05l5.3-7.43-4.93 8.15.4 2.31-.77-3.03Zm5.43 2.49-3.34-2.45 6.43-9.02-3.09 11.47Z"/></svg>
+      Open in Telegram
+    </a>
+  </div>
+
+  <div class="section-label">Powered by Hub</div>
+  <div class="tag">Make and manage <span>your</span><br/>AI agents, bots, apps,<br/>games, sites <span>—</span> from one chat.</div>
+
+  <div class="features">
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/></svg>
+      <h3>AI agents</h3>
+      <p>Connect any model. Give it tools. Let it run on its own.</p>
+    </div>
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="6" width="16" height="13" rx="3"/><path d="M9 11h.01M15 11h.01"/><path d="M9 15c1 1 2 1 3 1s2 0 3-1"/><path d="M12 3v3"/></svg>
+      <h3>Bots</h3>
+      <p>One token, one project. Hub wires up the rest.</p>
+    </div>
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/><path d="M8 14h2M14 14h2"/></svg>
+      <h3>Apps</h3>
+      <p>Mini apps that live inside Telegram or open as web pages.</p>
+    </div>
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 12h4M8 10v4"/><circle cx="16" cy="11" r="1.2"/><circle cx="18.5" cy="13.5" r="1.2"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg>
+      <h3>Games</h3>
+      <p>Build, host, and ship games people actually open.</p>
+    </div>
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+      <h3>Sites</h3>
+      <p>Every project gets a live URL. This page is one of them.</p>
+    </div>
+
+    <div class="feature">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>
+      <h3>One chat</h3>
+      <p>Spin up, edit, ship — everything happens in Telegram.</p>
+    </div>
+
+  </div>
+
+  <div class="bottom">
+    <div class="links">
+      <a href="${hubBot}">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21.92 4.27a.75.75 0 0 0-.81-.13L2.65 11.7a.75.75 0 0 0 .04 1.4l4.71 1.7 1.81 5.71a.75.75 0 0 0 1.27.27l2.74-2.95 4.71 3.45a.75.75 0 0 0 1.18-.42l3.05-15.92a.75.75 0 0 0-.24-.67Z"/></svg>
+        Start in Telegram
+      </a>
+      <a href="${hub}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        hub.labs.co
+      </a>
+    </div>
+    <div class="foot">@${bot} on Hub</div>
+  </div>
+
+</div>
+</body></html>`;
+}
+
 function renderPage({ tier, token, project, aap, versions = [] }) {
   const isSAP = tier === 'sap';
   const isPAP = tier === 'pap';
@@ -1798,7 +1919,17 @@ app.use((req, res, next) => {
     if (subRest === undefined) return res.redirect(301, `/${name}/v/${N}/`);
     return serveStatic(versionDir, subRest.replace(/^\/+/, ''), res);
   }
-  if (!fs.existsSync(pp.live)) return res.status(404).type('text/plain').send('not yet promoted');
+  // Hub fallback landing: project exists in state but has no index.html (or no live dir)
+  const isRoot = (rest === '' || rest === '/');
+  const projectExists = !!findProjectByName(name);
+  const hasLive = fs.existsSync(pp.live);
+  const hasIndex = hasLive && fs.existsSync(path.join(pp.live, 'index.html'));
+  if (isRoot && projectExists && !hasIndex) {
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=120');
+    return res.send(renderProjectLanding(name));
+  }
+  if (!hasLive) return res.status(404).type('text/plain').send('not yet promoted');
   return serveStatic(pp.live, rest.replace(/^\/+/, ''), res);
 });
 
