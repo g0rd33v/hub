@@ -582,10 +582,64 @@ footer a {
   margin-left: 24px;
 }
 footer a:hover { color: var(--text); }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+.feature-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.feature-block:hover {
+  border-color: var(--border-hi);
+  background: var(--card-hi);
+}
+.feature-block .ftag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.feature-block h4 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.feature-block p {
+  color: var(--text-dim);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.feature-block .ficon {
+  width: 26px;
+  height: 26px;
+  color: var(--text);
+  margin-bottom: 16px;
+  display: block;
+}
+.features-note {
+  text-align: center;
+  margin-top: 56px;
+  padding-top: 36px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 15px;
+}
+.features-note strong { color: var(--text); font-weight: 600; }
 @media (max-width: 800px) {
   .connect-items { grid-template-columns: repeat(2, 1fr); }
   .roles { grid-template-columns: 1fr; }
   .build-grid { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
   .free-row { grid-template-columns: repeat(2, 1fr); }
   .nav-links { gap: 16px; }
   .nav-links a:not(.nav-cta) { display: none; }
@@ -703,6 +757,68 @@ footer a:hover { color: var(--text); }
       <circle cx="22" cy="14" r="1.2" fill="currentColor"/>
       <circle cx="25" cy="17" r="1.2" fill="currentColor"/>
     </symbol>
+    <symbol id="f-pass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="6" width="18" height="12" rx="2"/>
+      <circle cx="9" cy="12" r="2"/>
+      <path d="M14 10h5M14 14h3"/>
+    </symbol>
+    <symbol id="f-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 12a3 3 0 0 0 4 0l3-3a3 3 0 0 0-4-4l-1 1"/>
+      <path d="M15 12a3 3 0 0 0-4 0l-3 3a3 3 0 0 0 4 4l1-1"/>
+    </symbol>
+    <symbol id="f-version" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="6" cy="6" r="2"/>
+      <circle cx="6" cy="18" r="2"/>
+      <circle cx="18" cy="12" r="2"/>
+      <path d="M6 8v8"/>
+      <path d="M8 18h6a3 3 0 0 0 3-3v-1"/>
+    </symbol>
+    <symbol id="f-mode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 6h16M4 12h16M4 18h10"/>
+      <circle cx="6" cy="6" r="0.5" fill="currentColor"/>
+      <circle cx="6" cy="12" r="0.5" fill="currentColor"/>
+      <circle cx="6" cy="18" r="0.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="f-kv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="6" rx="8" ry="3"/>
+      <path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
+      <path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
+    </symbol>
+    <symbol id="f-cron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3 2"/>
+    </symbol>
+    <symbol id="f-team" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="9" r="3"/>
+      <circle cx="17" cy="10" r="2.5"/>
+      <path d="M3 19c0-3 3-5 6-5s6 2 6 5"/>
+      <path d="M17 16c2 0 4 1 4 3"/>
+    </symbol>
+    <symbol id="f-github" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.04 1.53 1.04.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/>
+    </symbol>
+    <symbol id="f-broadcast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 11l18-7v16l-18-7z"/>
+      <path d="M11 11v8"/>
+    </symbol>
+    <symbol id="f-analytics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20V10"/>
+      <path d="M10 20V4"/>
+      <path d="M16 20v-8"/>
+      <path d="M22 20H2"/>
+    </symbol>
+    <symbol id="f-webhook" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="6" cy="18" r="3"/>
+      <circle cx="18" cy="18" r="3"/>
+      <circle cx="12" cy="6" r="3"/>
+      <path d="M12 9l-4 7"/>
+      <path d="M12 9l4 7"/>
+      <path d="M9 18h6"/>
+    </symbol>
+    <symbol id="f-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/>
+      <path d="M9 12l2 2 4-4"/>
+    </symbol>
     <symbol id="i-doc" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3h11l6 6v17a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z"/>
       <path d="M19 3v6h6"/>
@@ -719,6 +835,7 @@ footer a:hover { color: var(--text); }
       <a href="#what">What connects</a>
       <a href="#how">How it works</a>
       <a href="#build">Build</a>
+      <a href="#features">Features</a>
       <a href="#free">Free</a>
       <a href="https://t.me/LabsHubBot" class="nav-cta">
         <svg class="icon"><use href="#i-telegram"/></svg>
@@ -1025,6 +1142,110 @@ footer a:hover { color: var(--text); }
         <h4>Knowledge bases</h4>
         <p>Documentation, internal wikis, manuals. AI-generated, AI-maintained, always up to date.</p>
       </div>
+    </div>
+  </div>
+</section>
+<section id="features">
+  <div class="container">
+    <div class="section-eyebrow">Inside Hub</div>
+    <h2 class="section-h">
+      What's actually under the hood. <span class="dim">In plain words.</span>
+    </h2>
+    <p class="section-lead">
+      Hub isn't a marketing wrapper. Every connection, every project, every bot — they all run on real machinery. Here's what you get when you sign in.
+    </p>
+
+    <div class="features-grid">
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-pass"/></svg>
+        <div class="ftag">SIGN IN &amp; ACCESS</div>
+        <h4>One link, the right access</h4>
+        <p>No passwords. Hub gives you a private link for everything you own — a project, a contributor seat, the whole server. Click the link, you're in.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-link"/></svg>
+        <div class="ftag">PROJECT IN ONE STEP</div>
+        <h4>Paste a bot token, done</h4>
+        <p>Get a token from BotFather, paste it into Hub. You instantly have a project, a live URL, and a working bot. No setup wizards.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-mode"/></svg>
+        <div class="ftag">3 WAYS TO RUN A BOT</div>
+        <h4>From zero-config to full code</h4>
+        <p>Drop nothing — bot answers with a clean welcome. Drop a config file — replies and buttons work. Drop code — your bot does anything you write. Pick the level you need.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-version"/></svg>
+        <div class="ftag">VERSIONS</div>
+        <h4>Every change saved forever</h4>
+        <p>Built on real Git underneath. Every edit is a version. Roll back anytime. View any past version by URL. Nothing is ever lost.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-kv"/></svg>
+        <div class="ftag">STORAGE</div>
+        <h4>Built-in database</h4>
+        <p>Every project gets a key-value store. Save user data, bot state, leaderboards — without setting up a database. Ten megabytes per project, free.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-cron"/></svg>
+        <div class="ftag">SCHEDULES</div>
+        <h4>Run things on a timer</h4>
+        <p>Daily reminders. Hourly checks. Weekly digests. Add a schedule, Hub fires it. Works for any bot mode.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-team"/></svg>
+        <div class="ftag">COLLABORATORS</div>
+        <h4>Invite without giving the keys</h4>
+        <p>Hand out contributor links. They edit in their own branch. You review, you merge — or you don't. Your live project stays safe.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-github"/></svg>
+        <div class="ftag">GITHUB</div>
+        <h4>Auto-sync to your repo</h4>
+        <p>Connect any GitHub repo. Every Hub commit pushes there automatically. Or pull from GitHub — Hub redeploys on its own.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-broadcast"/></svg>
+        <div class="ftag">BROADCAST</div>
+        <h4>Reach all your users at once</h4>
+        <p>People who tap /start on your bot become subscribers automatically. Send one message, reach all of them. No lists to manage.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-analytics"/></svg>
+        <div class="ftag">ANALYTICS</div>
+        <h4>See who's using it</h4>
+        <p>Active users, languages, peak hours, message types. Per project, always live, no setup. Your data stays yours.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-webhook"/></svg>
+        <div class="ftag">WEBHOOKS</div>
+        <h4>Plug Hub into your own server</h4>
+        <p>Want to handle bot updates yourself? Set a webhook URL — Hub forwards every message to your server, with full delivery logs.</p>
+      </div>
+
+      <div class="feature-block">
+        <svg class="ficon"><use href="#f-shield"/></svg>
+        <div class="ftag">SAFETY NET</div>
+        <h4>Daily backups, automatic</h4>
+        <p>Every day, all your projects are backed up. Stored on Hub, mirrored to two more servers. If something breaks, nothing is lost.</p>
+      </div>
+
+    </div>
+
+    <div class="features-note">
+      Plus a <strong>landing page</strong> on every project, <strong>per-project rate limits</strong>, <strong>Telegram Mini App</strong> support, and a <strong>code sandbox</strong> for safety. <br/>
+      All free. All ready when you sign in.
     </div>
   </div>
 </section>
