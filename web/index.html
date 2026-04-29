@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hub by Labs — Connect everything. Manage from chat. Free.</title>
-<meta name="description" content="Hub by Labs: connect your bot, channel, site, app, ChatGPT, Claude, Grok, APIs — all in one place. Manage everything from chat. Free.">
+<title>Hub by Labs — Your digital life, finally working together.</title>
+<meta name="description" content="Hub is a smart home for your digital life. Bring what you already have — bot, site, accounts, AI — and Hub helps you get more out of all of it. Free.">
 <meta property="og:title" content="Hub by Labs">
-<meta property="og:description" content="Connect everything. Manage from chat. Free.">
+<meta property="og:description" content="A smart home for your digital life. Bring what you already have, Hub makes it work together.">
 <meta property="og:url" content="https://hub.labs.co">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -626,15 +626,39 @@ footer a:hover { color: var(--text); }
   margin-bottom: 16px;
   display: block;
 }
-.features-note {
+.features-cta {
   text-align: center;
   margin-top: 56px;
   padding-top: 36px;
   border-top: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 15px;
 }
-.features-note strong { color: var(--text); font-weight: 600; }
+.features-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 14px 24px;
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.features-link:hover {
+  background: var(--card-hi);
+  border-color: var(--text);
+  transform: translateY(-1px);
+}
+.features-link svg { width: 16px; height: 16px; }
+.features-cta-note {
+  margin-top: 18px;
+  font-family: 'Source Serif Pro', serif;
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 14px;
+}
 @media (max-width: 800px) {
   .connect-items { grid-template-columns: repeat(2, 1fr); }
   .roles { grid-template-columns: 1fr; }
@@ -832,11 +856,11 @@ footer a:hover { color: var(--text); }
       <span class="bracket">[</span><span class="word">hub</span><span class="bracket">]</span>
     </div>
     <div class="nav-links">
-      <a href="#what">What connects</a>
+      <a href="#what">What you bring</a>
+      <a href="#features">What Hub does</a>
       <a href="#build">Build</a>
-      <a href="#features">Features</a>
       <a href="#how">The idea</a>
-      <a href="#free">Free</a>
+      <a href="/docs">Docs</a>
       <a href="https://t.me/LabsHubBot" class="nav-cta">
         <svg class="icon"><use href="#i-telegram"/></svg>
         Open in Telegram
@@ -846,13 +870,13 @@ footer a:hover { color: var(--text); }
 </nav>
 <section class="hero">
   <div class="container">
-    <div class="hero-eyebrow">Made by Labs · hub.labs.co</div>
+    <div class="hero-eyebrow">A smart home for your digital life</div>
     <h1>
-      Connect everything.<br>
-      <span class="dim">Manage from chat.</span>
+      You already have <br>
+      <span class="dim">everything.</span>
     </h1>
     <p class="lead">
-      Your bot, your site, your AI — connected, talking to each other, all run from one Telegram chat.
+      A bot, a site, accounts on ChatGPT and Claude, scattered API keys, half-finished projects. Hub takes all of it and helps you actually <em class="term">use</em> it.
     </p>
     <div class="login">
       <div class="login-label">Sign in</div>
@@ -966,22 +990,22 @@ footer a:hover { color: var(--text); }
         <text class="hub-label" text-anchor="middle" dominant-baseline="middle" dy="2">[hub]</text>
       </g>
     </svg>
-    <p class="flow-caption">Everything you already use, talking to everything else, through one place.</p>
+    <p class="flow-caption">Your devices, but for your digital life. Hub is the brain in the middle.</p>
   </div>
 </section>
 <section id="what">
   <div class="container">
-    <div class="section-eyebrow">What connects</div>
+    <div class="section-eyebrow">What you bring in</div>
     <h2 class="section-h">
-      Anything you have online. <span class="dim">Connect it to Hub.</span>
+      Drop in what you have. <span class="dim">Hub takes it from there.</span>
     </h2>
     <p class="section-lead">
-      Three kinds of connections. Pick what you need.
+      A smart home doesn't make you wire the lights. You plug things in, it figures them out. Same here. Bring tokens, links, accounts — Hub reads, organizes, and starts working.
     </p>
     <div class="connect-groups">
       <div class="connect-group">
         <div class="connect-group-header">
-          <div class="connect-group-title">Where you talk to people</div>
+          <div class="connect-group-title">Places where your audience lives</div>
           <div class="connect-group-meta">CHANNELS &amp; AUDIENCES</div>
         </div>
         <div class="connect-items">
@@ -1009,7 +1033,7 @@ footer a:hover { color: var(--text); }
       </div>
       <div class="connect-group">
         <div class="connect-group-header">
-          <div class="connect-group-title">Where you talk to AI</div>
+          <div class="connect-group-title">AI accounts you already pay for</div>
           <div class="connect-group-meta">YOUR LLMS &amp; AGENTS</div>
         </div>
         <div class="connect-items">
@@ -1037,7 +1061,7 @@ footer a:hover { color: var(--text); }
       </div>
       <div class="connect-group">
         <div class="connect-group-header">
-          <div class="connect-group-title">Where you talk to systems</div>
+          <div class="connect-group-title">Tools and data you have access to</div>
           <div class="connect-group-meta">APIS &amp; INTEGRATIONS</div>
         </div>
         <div class="connect-items">
@@ -1064,12 +1088,12 @@ footer a:hover { color: var(--text); }
 </section>
 <section id="features">
   <div class="container">
-    <div class="section-eyebrow">What you get</div>
+    <div class="section-eyebrow">What Hub does for you</div>
     <h2 class="section-h">
-      Twelve things, <span class="dim">all working from day one.</span>
+      A dozen things, <span class="dim">all running quietly in the background.</span>
     </h2>
     <p class="section-lead">
-      No setup. No paid tiers. Sign in once, all of this is ready.
+      Like the smart home that locks the door when you leave and turns the lights down at night. Hub does these for your digital life — none of them require a setup wizard.
     </p>
 
     <div class="features-grid">
@@ -1160,19 +1184,23 @@ footer a:hover { color: var(--text); }
 
     </div>
 
-    <div class="features-note">
-      Plus a <strong>landing page</strong> on every project, <strong>fair-use limits</strong>, <strong>Telegram Mini App</strong> support, and a <strong>safe code sandbox</strong>.
+    <div class="features-cta">
+      <a href="/docs" class="features-link">
+        See the full reference
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      </a>
+      <p class="features-cta-note">Built for the people who want details — and for the AI agents that need them.</p>
     </div>
   </div>
 </section>
 <section id="build">
   <div class="container">
-    <div class="section-eyebrow">What you can build</div>
+    <div class="section-eyebrow">If you don't have it yet</div>
     <h2 class="section-h">
-      Bring something, <span class="dim">or start from scratch.</span>
+      Hub helps you make it. <span class="dim">In plain English.</span>
     </h2>
     <p class="section-lead">
-      Already have a bot, a site, an idea? Connect it. Don't have one yet? Talk to your AI assistant — it edits the project for you, Hub hosts and ships it.
+      Don't have a bot? Don't have a site? Tell your AI assistant what you want — it writes it, Hub hosts it. Same six categories, same flow.
     </p>
     <div class="build-grid">
       <div class="build-card">
@@ -1218,32 +1246,32 @@ footer a:hover { color: var(--text); }
   <div class="container-narrow">
     <div class="section-eyebrow">The idea</div>
     <h2 class="section-h">
-      Think of it as <span class="dim">an airport.</span>
+      Think of it as <span class="dim">a smart home.</span>
     </h2>
     <div class="editorial-body">
       <p class="dropcap">
-        A big airport is where everything passes through. People fly in, fly out, change planes. Cargo moves alongside passengers. Different airlines share the same runways. Information boards keep everyone oriented. It works because <mark>everything connects in one place</mark> — but nothing is forced through any single path.
+        A smart home doesn't replace your lights, your speakers, your locks. It connects what you already own and makes them <mark>work together</mark>. You leave the house — the door locks, the lights dim, the music stops. You didn't program any of that explicitly. The home figured it out from your devices and your habits.
       </p>
       <blockquote class="pullquote">
-        Hub is that, for everything you have online.
+        Hub is the same idea, for your digital life.
       </blockquote>
       <p>
-        Your bot, your channel, your site, your app, your ChatGPT account, your Claude account, your APIs — they all plug into Hub. Information flows between them: a message from your bot reaches your group, a question from your site goes to ChatGPT, a result from Claude goes back to your customers. <strong>You set the routes. Hub runs the traffic.</strong>
+        You bring in what you already have — your bot, your site, your ChatGPT and Claude accounts, your API keys, your scattered tools. Hub <strong>sees them all in one place</strong>, learns what you're trying to do, and starts making them <strong>cooperate</strong>: your bot drafts answers using your Claude account, your site posts updates to your channel, your APIs feed your dashboards. You don't write integrations. You describe what you want, in plain language.
       </p>
       <p>
-        And because Hub starts inside Telegram, you manage all of this from a chat. No dashboards, no admin panels, no separate logins.
+        And because Hub starts inside Telegram, all of this happens in one chat. No dashboards. No admin panels. No separate logins.
       </p>
     </div>
     <div class="roles">
       <div class="role-card">
         <div class="label">YOU</div>
-        <h3>Manage from chat</h3>
-        <p>You're the owner. You connect things, set the rules, watch the flow. Everything runs from one Telegram chat with Hub.</p>
+        <h3>You bring it in</h3>
+        <p>You drop in tokens, accounts, links, ideas. Hub sees the whole picture and tells you what's possible. You approve, it runs.</p>
       </div>
       <div class="role-card">
-        <div class="label">EVERYONE ELSE</div>
-        <h3>Use what's connected</h3>
-        <p>Anyone you give access to can also use Hub — as a contributor, as a customer, as an AI agent. Same Hub, different role.</p>
+        <div class="label">HUB</div>
+        <h3>It runs quietly</h3>
+        <p>Hub keeps things synced, takes care of housekeeping, runs schedules and answers automations. Like the smart home you don't have to think about.</p>
       </div>
     </div>
   </div>
@@ -1252,10 +1280,10 @@ footer a:hover { color: var(--text); }
   <div class="container">
     <div class="section-eyebrow">Pricing</div>
     <h2 class="section-h">
-      Free. <span class="dim">All of it.</span>
+      Free. <span class="dim">As in, actually free.</span>
     </h2>
     <p class="section-lead">
-      No tiers. No trials. No card. Connect as much as you want, build as much as you need. Paid options will come later — for advanced needs only. The core stays free.
+      No tiers. No trials. No card. You bring in your own accounts and your own keys, so the costs that exist are yours, not ours. Hub itself stays free for everyone — that's the deal.
     </p>
     <div class="free-row">
       <div class="free-item">
@@ -1280,7 +1308,7 @@ footer a:hover { color: var(--text); }
 <section class="final-cta">
   <div class="container">
     <h2>Open <span style="color: var(--text-dim)">@LabsHubBot</span></h2>
-    <p>One link, one chat, everything connected.</p>
+    <p>Bring what you have. See what it can do, together.</p>
     <div class="login">
       <a href="https://t.me/LabsHubBot" class="login-btn tg">
         <svg class="icon"><use href="#i-telegram"/></svg>
@@ -1310,6 +1338,7 @@ footer a:hover { color: var(--text); }
       <span style="margin-left: 16px;">A Labs project · hub.labs.co · Alpha · Free</span>
     </div>
     <div>
+      <a href="/docs">Docs</a>
       <a href="https://labs.co">labs.co</a>
       <a href="https://t.me/LabsHubBot">@LabsHubBot</a>
     </div>

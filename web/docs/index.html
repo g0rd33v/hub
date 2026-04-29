@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hub Docs — Reference for humans and agents</title>
+<meta name="description" content="Hub documentation: what every feature does, where to find it, and how to use it. Plain language reference for humans, with stable anchors for AI agents.">
+<meta property="og:title" content="Hub Docs">
+<meta property="og:description" content="Reference for humans and agents. Every feature, plain language, stable anchors.">
+<meta property="og:url" content="https://hub.labs.co/docs">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #000000;
+  --card: #0d0d0d;
+  --card-hi: #141414;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hi: rgba(255, 255, 255, 0.15);
+  --text: #ffffff;
+  --text-dim: #888888;
+  --text-faint: #555555;
+  --tg-blue: #229ED9;
+  --tg-blue-hover: #27A7E7;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body { min-height: 100vh; overflow-x: hidden; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.serif { font-family: 'Source Serif Pro', Georgia, serif; }
+a { color: inherit; }
+
+/* Navigation */
+nav {
+  padding: 28px 0;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: var(--text);
+}
+.logo .bracket { color: var(--text-faint); }
+.logo .word { color: var(--text); }
+.logo .crumb { color: var(--text-dim); margin-left: 12px; font-size: 16px; font-weight: 500; }
+.nav-links {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+.nav-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--tg-blue);
+  color: #ffffff !important;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.nav-cta:hover { background: var(--tg-blue-hover); }
+.nav-cta svg { width: 14px; height: 14px; }
+
+/* Layout */
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 56px;
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; gap: 32px; }
+  .toc { display: none; }
+}
+
+/* TOC sidebar */
+.toc {
+  position: sticky;
+  top: 100px;
+  align-self: start;
+  padding: 40px 0;
+  font-size: 14px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+.toc-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-left: 12px;
+}
+.toc ul { list-style: none; }
+.toc li { margin: 0; }
+.toc a {
+  display: block;
+  padding: 6px 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13.5px;
+  border-left: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1.5;
+}
+.toc a:hover {
+  color: var(--text);
+  border-left-color: var(--text-faint);
+  background: rgba(255,255,255,0.02);
+}
+.toc-section {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 24px 0 8px 12px;
+}
+
+/* Main content */
+main {
+  padding: 40px 0 120px;
+  min-width: 0;
+}
+.page-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.page-h {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 24px;
+}
+.page-h .dim { color: var(--text-dim); }
+.page-lead {
+  font-size: 19px;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.6;
+  margin-bottom: 56px;
+  font-family: 'Source Serif Pro', Georgia, serif;
+}
+.page-lead em { color: var(--text); font-style: italic; }
+
+/* Doc section */
+.doc-section {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+.doc-section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+.doc-section-h {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+/* Feature block */
+.feature {
+  margin-bottom: 48px;
+  scroll-margin-top: 100px;
+}
+.feature h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.feature h2 a.anchor {
+  color: var(--text-faint);
+  text-decoration: none;
+  font-size: 18px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.feature:hover h2 a.anchor { opacity: 1; }
+.feature h2 a.anchor:hover { color: var(--text); }
+.feature .tagline {
+  font-family: 'Source Serif Pro', serif;
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 17px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.feature .body {
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 720px;
+}
+.feature .body p { margin-bottom: 16px; color: var(--text-dim); }
+.feature .body p strong { color: var(--text); font-weight: 600; }
+.feature .body code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.feature .meta {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.feature .meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+.feature .meta-pill strong { color: var(--text); font-weight: 600; }
+.feature .anchor-tag {
+  margin-top: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+.feature .anchor-tag a { color: var(--text-faint); text-decoration: none; }
+.feature .anchor-tag a:hover { color: var(--text-dim); }
+
+/* Footer */
+footer {
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--text-faint);
+  margin-top: 80px;
+}
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  margin-left: 24px;
+}
+footer a:hover { color: var(--text); }
+
+/* Coming soon block */
+.coming {
+  margin-top: 80px;
+  padding: 32px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.coming-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.coming h3 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.coming p { color: var(--text-dim); font-size: 15px; line-height: 1.6; }
+
+/* For-agents block */
+.for-agents {
+  margin-top: 64px;
+  padding: 28px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.for-agents .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.for-agents code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--text);
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <span class="bracket">[</span><span class="word">hub</span><span class="bracket">]</span><span class="crumb">/ docs</span>
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/#features">What Hub does</a>
+      <a href="/#how">The idea</a>
+      <a href="https://t.me/LabsHubBot" class="nav-cta">
+        <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+      Open in Telegram
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+
+<aside class="toc" aria-label="Table of contents">
+  <div class="toc-label">Reference</div>
+
+  <div class="toc-section">Foundation</div>
+  <ul>
+    <li><a href="#sign-in">Sign-in &amp; access</a></li>
+    <li><a href="#new-project">Make a new project</a></li>
+    <li><a href="#bot-modes">Three bot modes</a></li>
+  </ul>
+
+  <div class="toc-section">Project life</div>
+  <ul>
+    <li><a href="#versions">Versions</a></li>
+    <li><a href="#storage">Storage</a></li>
+    <li><a href="#schedules">Schedules</a></li>
+    <li><a href="#collaborators">Collaborators</a></li>
+    <li><a href="#github">GitHub sync</a></li>
+  </ul>
+
+  <div class="toc-section">Reach &amp; insight</div>
+  <ul>
+    <li><a href="#broadcast">Broadcast</a></li>
+    <li><a href="#analytics">Analytics</a></li>
+    <li><a href="#webhooks">Webhooks</a></li>
+  </ul>
+
+  <div class="toc-section">Operations</div>
+  <ul>
+    <li><a href="#backups">Daily backups</a></li>
+    <li><a href="#landing">Auto landing pages</a></li>
+    <li><a href="#sandbox">Code sandbox</a></li>
+    <li><a href="#rate-limits">Fair-use limits</a></li>
+  </ul>
+
+  <div class="toc-section">Coming soon</div>
+  <ul>
+    <li><a href="#roadmap">What's next</a></li>
+  </ul>
+</aside>
+
+<main>
+
+  <div class="page-eyebrow">DOCS · v1.0</div>
+  <h1 class="page-h">Hub reference. <span class="dim">Plain language.</span></h1>
+  <p class="page-lead">
+    A smart home for your digital life keeps a manual nearby — for the curious owner who wants to know how the lights actually dim, and for the agents that need to read it back. <em>Same here.</em>
+  </p>
+
+  <!-- ═══════════ FOUNDATION ═══════════ -->
+
+  <section class="doc-section">
+    <div class="doc-section-h">Foundation · The basics</div>
+
+    <article class="feature" id="sign-in">
+      <h2>Sign-in &amp; access <a class="anchor" href="#sign-in">¶</a></h2>
+      <div class="tagline">One link, the right access. No passwords.</div>
+      <div class="body">
+        <p>Hub gives you a private link for everything you own — your project, your contributor seat, your whole server. Click the link, you're in. No usernames, no password reset emails, no two-factor codes to fish out.</p>
+        <p>There are <strong>three levels of access</strong>, each with its own kind of link:</p>
+        <p><strong>Server pass</strong> — full control over a Hub server. The owner has this. They create projects, manage everything.<br>
+        <strong>Project pass</strong> — full control over one project. You get this when you make a project. You can edit it, install bots on it, invite contributors.<br>
+        <strong>Agent pass</strong> — contributor-level access to one project. Edit in your own branch, push commits, request merges. The project owner approves.</p>
+        <p>Pass links can be revoked at any time from the master bot. Lost a link? Get a new one issued.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Tier: <strong>SAP / PAP / AAP</strong></span>
+        <span class="meta-pill">Format: <strong>pass_&lt;n&gt;_&lt;role&gt;_&lt;hex&gt;</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#sign-in">https://hub.labs.co/docs#sign-in</a></div>
+    </article>
+
+    <article class="feature" id="new-project">
+      <h2>Make a new project <a class="anchor" href="#new-project">¶</a></h2>
+      <div class="tagline">Paste a bot token, get a working project.</div>
+      <div class="body">
+        <p>Inside <code>@LabsHubBot</code>, send <code>/new</code>. Hub asks for an API token from <code>@BotFather</code>. Paste it. That's it.</p>
+        <p>Hub validates the token, picks the bot's username as the project name, creates the project, attaches the bot, and gives you a live URL plus a dashboard link. <strong>One paste. Working bot.</strong></p>
+        <p>No setup wizards. No "configure your domain" step. No CLI. The project is ready before you've finished your coffee.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Trigger: <strong>/new in @LabsHubBot</strong></span>
+        <span class="meta-pill">Result: <strong>live URL + dashboard</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#new-project">https://hub.labs.co/docs#new-project</a></div>
+    </article>
+
+    <article class="feature" id="bot-modes">
+      <h2>Three bot modes <a class="anchor" href="#bot-modes">¶</a></h2>
+      <div class="tagline">From zero-config to full code. Pick the level you need.</div>
+      <div class="body">
+        <p>Every project's bot can run three different ways. Same bot, different amount of work from you.</p>
+        <p><strong>Default mode (zero-config).</strong> Drop nothing. The bot already replies to <code>/start</code> with a clean welcome page that uses the project's title and live URL. Subscribers list builds itself. Good enough for content channels and simple announce-bots.</p>
+        <p><strong>Config-file mode (declarative).</strong> Drop a <code>bot.json</code> file in the project. It maps commands to replies, defines keyboards, sets inline buttons. No code, just data. Good for menus, FAQ bots, simple Q&amp;A.</p>
+        <p><strong>Code mode (full power).</strong> Drop a <code>bot.js</code> file. It runs in a safe sandbox with a built-in key-value store, a Telegram API helper, a logger, and a 5-second timeout per call. Good for anything beyond the first two: stateful bots, integrations, AI agents.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Files: <strong>bot.json · bot.js</strong></span>
+        <span class="meta-pill">Sandbox: <strong>Node vm · 5s timeout</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#bot-modes">https://hub.labs.co/docs#bot-modes</a></div>
+    </article>
+  </section>
+
+  <!-- ═══════════ PROJECT LIFE ═══════════ -->
+
+  <section class="doc-section">
+    <div class="doc-section-h">Project life · While you build</div>
+
+    <article class="feature" id="versions">
+      <h2>Versions <a class="anchor" href="#versions">¶</a></h2>
+      <div class="tagline">Every change saved forever. Roll back anytime.</div>
+      <div class="body">
+        <p>Underneath, Hub is built on real Git. Every edit you make is a commit. Every commit is a version. Every version has a URL.</p>
+        <p>You can <strong>see any past version</strong> by visiting <code>/&lt;project&gt;/v/&lt;n&gt;/</code> in your browser — it serves the project exactly as it was at that point in time.</p>
+        <p>You can <strong>roll back</strong> to any past version with one click. Made a mistake? Promoted broken code? Hub keeps the full history; nothing is ever lost.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Backed by: <strong>real Git</strong></span>
+        <span class="meta-pill">URL: <strong>/&lt;project&gt;/v/&lt;n&gt;/</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#versions">https://hub.labs.co/docs#versions</a></div>
+    </article>
+
+    <article class="feature" id="storage">
+      <h2>Storage <a class="anchor" href="#storage">¶</a></h2>
+      <div class="tagline">Built-in database, per project. No setup.</div>
+      <div class="body">
+        <p>Every project gets a <strong>key-value store</strong> built in. Save user state, leaderboards, user preferences, cache results. <code>get</code>, <code>set</code>, <code>del</code>, <code>list</code>, <code>incr</code>, with optional TTL.</p>
+        <p>It's backed by SQLite under the hood, scoped to your project, free up to <strong>10 megabytes</strong> per project. That's room for tens of thousands of records — enough for most bots and small apps.</p>
+        <p>You don't provision anything. You just call <code>ctx.kv.set('foo', 'bar')</code> from your bot code, and the data persists.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Backend: <strong>SQLite</strong></span>
+        <span class="meta-pill">Cap: <strong>10 MB / project</strong></span>
+        <span class="meta-pill">API: <strong>get / set / del / list / incr</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#storage">https://hub.labs.co/docs#storage</a></div>
+    </article>
+
+    <article class="feature" id="schedules">
+      <h2>Schedules <a class="anchor" href="#schedules">¶</a></h2>
+      <div class="tagline">Run things on a timer. Daily, hourly, weekly, custom.</div>
+      <div class="body">
+        <p>Need a daily reminder? An hourly check? A weekly digest at 9am Monday? Drop a <code>cron.json</code> file in your project, list the schedules and the function names that should run.</p>
+        <p>Hub fires them automatically. Works in all three bot modes — your scheduled function gets called like any other update, with a synthetic context.</p>
+        <p>No external cron service. No setup. Add a line, schedule starts.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">File: <strong>cron.json</strong></span>
+        <span class="meta-pill">Granularity: <strong>minute-of-hour</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#schedules">https://hub.labs.co/docs#schedules</a></div>
+    </article>
+
+    <article class="feature" id="collaborators">
+      <h2>Collaborators <a class="anchor" href="#collaborators">¶</a></h2>
+      <div class="tagline">Invite without giving the keys. They edit in their own branch.</div>
+      <div class="body">
+        <p>Want a friend, a designer, an AI agent to help on a project — without giving them the ability to break the live version? Issue them an <strong>agent pass</strong>.</p>
+        <p>They get their own branch in your project. They can upload files, edit, commit. Their work doesn't touch your live site until you, the project owner, <strong>review and merge</strong>.</p>
+        <p>Multiple agents can work in parallel without stepping on each other. You see what's pending, you approve what you want, you ignore the rest.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Per-project: <strong>unlimited agents</strong></span>
+        <span class="meta-pill">Workflow: <strong>branch → review → merge</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#collaborators">https://hub.labs.co/docs#collaborators</a></div>
+    </article>
+
+    <article class="feature" id="github">
+      <h2>GitHub sync <a class="anchor" href="#github">¶</a></h2>
+      <div class="tagline">Auto-sync to your repo. Both directions.</div>
+      <div class="body">
+        <p>Connect any GitHub repo to your Hub project. Once linked, you have two options.</p>
+        <p><strong>Push from Hub.</strong> Every commit you make on Hub auto-pushes to your repo. You can review it on github.com, share it, fork it, point CI at it.</p>
+        <p><strong>Pull to Hub.</strong> External cron pulls from your repo, copies into <code>live/</code>, and Hub redeploys. Edit in your favorite IDE, commit normally — your Hub project updates on its own.</p>
+        <p>Use both at once if you want. Tokens are kept in the remote URL only during git operations, then scrubbed.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Direction: <strong>push · pull · both</strong></span>
+        <span class="meta-pill">Auth: <strong>per-server PAT or per-project</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#github">https://hub.labs.co/docs#github</a></div>
+    </article>
+  </section>
+
+  <!-- ═══════════ REACH & INSIGHT ═══════════ -->
+
+  <section class="doc-section">
+    <div class="doc-section-h">Reach &amp; insight · See and reach your audience</div>
+
+    <article class="feature" id="broadcast">
+      <h2>Broadcast <a class="anchor" href="#broadcast">¶</a></h2>
+      <div class="tagline">Reach all your subscribers at once. No list to manage.</div>
+      <div class="body">
+        <p>When someone sends <code>/start</code> to your project bot, Hub adds them to a subscriber list automatically. When they send <code>/stop</code>, Hub removes them. You don't manage anything.</p>
+        <p>To send a message to everyone — make a single API call. Hub fans out to all subscribers, respecting Telegram rate limits, with a Hub-branded footer attached to each message.</p>
+        <p>Good for content updates, announcement channels, drop notifications, anything where you have an audience and a thing to say.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Auto-managed: <strong>subscribers</strong></span>
+        <span class="meta-pill">Rate-limit safe: <strong>yes</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#broadcast">https://hub.labs.co/docs#broadcast</a></div>
+    </article>
+
+    <article class="feature" id="analytics">
+      <h2>Analytics <a class="anchor" href="#analytics">¶</a></h2>
+      <div class="tagline">See who's using your bot. Always live, no setup.</div>
+      <div class="body">
+        <p>Every Telegram update your bot receives is logged for analytics. Hub aggregates: total messages, unique users, languages, countries (heuristic from language), peak hours, message types.</p>
+        <p>You see <strong>active users</strong> for last day, last week, last month. You see <strong>daily snapshots</strong> kept forever. You see <strong>peak hour distribution</strong> — when your audience actually shows up.</p>
+        <p>Per-project. Toggle on or off per project. Your data stays on your server, never crosses to other projects, never leaves Hub.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Tracked: <strong>users · langs · types · peaks</strong></span>
+        <span class="meta-pill">Storage: <strong>per-project, append-only</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#analytics">https://hub.labs.co/docs#analytics</a></div>
+    </article>
+
+    <article class="feature" id="webhooks">
+      <h2>Webhooks <a class="anchor" href="#webhooks">¶</a></h2>
+      <div class="tagline">Plug Hub into your own server.</div>
+      <div class="body">
+        <p>Want to handle bot updates yourself, on your own infrastructure? Set a webhook URL. Hub will forward <strong>every Telegram update</strong> to that URL as a POST with JSON body.</p>
+        <p>Custom headers supported. URL validated (must be HTTPS, no localhost or private IPs). Hub keeps a <strong>delivery log</strong> — last 50 forwards with timestamp, response status, and excerpt — so you can debug when things go wrong.</p>
+        <p>This is how you connect Hub to an external system, a serverless function, your own backend. Hub becomes the front-end and forwarder; you handle the logic.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Delivery log: <strong>last 50</strong></span>
+        <span class="meta-pill">URL: <strong>HTTPS only, no private IPs</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#webhooks">https://hub.labs.co/docs#webhooks</a></div>
+    </article>
+  </section>
+
+  <!-- ═══════════ OPERATIONS ═══════════ -->
+
+  <section class="doc-section">
+    <div class="doc-section-h">Operations · Quiet things that just run</div>
+
+    <article class="feature" id="backups">
+      <h2>Daily backups <a class="anchor" href="#backups">¶</a></h2>
+      <div class="tagline">Every day, everything backed up. Mirrored to two more servers.</div>
+      <div class="body">
+        <p>Once a day, automatically, Hub creates a tarball of every project, every bot config, every server token, every landing page. Stored locally with rotation — last seven kept on disk.</p>
+        <p>Then it's <strong>shipped over SSH</strong> to two other Labs servers as cold copies. So if the main server burns down, your data exists on two more places. Nothing for you to configure.</p>
+        <p>The SSH key used for shipping is restricted to a single command — it can drop a tarball into a backup folder and nothing else. No shell access, no other commands.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Schedule: <strong>daily 03:00 UTC</strong></span>
+        <span class="meta-pill">Copies: <strong>3 servers, 7 each</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#backups">https://hub.labs.co/docs#backups</a></div>
+    </article>
+
+    <article class="feature" id="landing">
+      <h2>Auto landing pages <a class="anchor" href="#landing">¶</a></h2>
+      <div class="tagline">Every project has a face, even before you've published anything.</div>
+      <div class="body">
+        <p>The moment a project is created — even if you haven't uploaded a single file — its URL serves a clean Hub-branded landing page. The page shows the bot's username, an "Open in Telegram" button, and a small explainer of what Hub is.</p>
+        <p>So a half-finished project never looks broken. Visitors see a real page. They can open the bot. They learn about Hub.</p>
+        <p>Once you upload your own <code>index.html</code>, your page replaces the default. The fallback only shows up while the slot is empty.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Replaces: <strong>404</strong></span>
+        <span class="meta-pill">Per project: <strong>auto-generated</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#landing">https://hub.labs.co/docs#landing</a></div>
+    </article>
+
+    <article class="feature" id="sandbox">
+      <h2>Code sandbox <a class="anchor" href="#sandbox">¶</a></h2>
+      <div class="tagline">Your bot code runs in a safe context. Accidents stay contained.</div>
+      <div class="body">
+        <p>When you drop a <code>bot.js</code>, Hub runs it in an isolated Node <code>vm</code> context. Whitelisted globals only: <code>fetch</code>, <code>JSON</code>, <code>URL</code>, <code>crypto.randomUUID</code>, the basics. <strong>No</strong> file system, child processes, network sockets, dynamic <code>require</code>.</p>
+        <p>Each invocation is capped at <strong>5 seconds wallclock</strong>. Each project's KV is capped at 10 MB. If your code is slow or buggy or hostile, the blast radius is your project alone.</p>
+        <p>This is a first-pass sandbox: it stops accidents and casual probes, not a determined attacker. Stronger isolation is on the roadmap.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Engine: <strong>Node vm Context</strong></span>
+        <span class="meta-pill">Limits: <strong>5s · 10MB · no FS/net</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#sandbox">https://hub.labs.co/docs#sandbox</a></div>
+    </article>
+
+    <article class="feature" id="rate-limits">
+      <h2>Fair-use limits <a class="anchor" href="#rate-limits">¶</a></h2>
+      <div class="tagline">Per-tier, per-token. Generous for humans, sane for accidents.</div>
+      <div class="body">
+        <p>Every API call is rate-limited based on your access tier. Server-pass holders get the highest cap, project-pass next, agent-pass last. The buckets reset on a regular cadence and on server restart.</p>
+        <p>Real human use never hits these limits. They exist so that a runaway script — or an over-eager AI agent — can't accidentally hammer the server.</p>
+        <p>If you do hit a limit, the response includes a <code>retry-after</code> header so your code knows to back off.</p>
+      </div>
+      <div class="meta">
+        <span class="meta-pill">Per: <strong>tier × token</strong></span>
+        <span class="meta-pill">Response: <strong>429 + retry-after</strong></span>
+      </div>
+      <div class="anchor-tag"><a href="#rate-limits">https://hub.labs.co/docs#rate-limits</a></div>
+    </article>
+  </section>
+
+  <!-- ═══════════ ROADMAP ═══════════ -->
+
+  <section class="doc-section">
+    <div class="doc-section-h">Coming soon · On the roadmap</div>
+
+    <div class="coming" id="roadmap">
+      <div class="coming-label">What's next</div>
+      <h3>Things that will land here as Hub grows.</h3>
+      <p>Custom domains for projects. Sign-in beyond Telegram. Project templates. A public catalog of agents and integrations. Stronger sandbox isolation. Per-project metering. Multi-server federation.</p>
+      <p style="margin-top: 12px;">Each one will get its own anchor on this page when it ships. If you want any of these sooner — talk to <a href="https://t.me/LabsHubBot" style="color: var(--text); text-decoration: underline;">@LabsHubBot</a>.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ FOR AGENTS ═══════════ -->
+
+  <div class="for-agents">
+    <div class="label">For AI agents reading this</div>
+    <p>Every feature on this page has a <strong>stable anchor</strong> in the form <code>https://hub.labs.co/docs#&lt;feature-id&gt;</code>. Use the URL at the bottom of each feature block when citing or linking. Anchors won't change between versions; new features get new anchors, never repurposed ones.</p>
+    <p style="margin-top: 12px;">For programmatic access to feature metadata, see the project's <a href="https://github.com/g0rd33v/hub" style="color: var(--text); text-decoration: underline;">source on GitHub</a>.</p>
+  </div>
+
+</main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <a href="/" style="margin-left: 0;" class="logo"><span class="bracket">[</span><span class="word">hub</span><span class="bracket">]</span></a>
+      <span style="margin-left: 16px;">A Labs project · hub.labs.co · docs v1.0</span>
+    </div>
+    <div>
+      <a href="/">Home</a>
+      <a href="https://labs.co">labs.co</a>
+      <a href="https://t.me/LabsHubBot">@LabsHubBot</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
