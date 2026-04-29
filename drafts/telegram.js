@@ -326,43 +326,32 @@ function tierBadge(tier) {
   return { sap: '🔑 server', pap: '📁 project', aap: '🤝 agent' }[tier] || tier;
 }
 
-// v0.8: refreshed welcome
 function welcomeText(user) {
   const name = user && user.first_name ? user.first_name : 'there';
-  let t = `<b>Drafts</b> ✦ build by talking to Claude\n\n`;
-  t += `gm ${esc(name)} 👋\n\n`;
-  t += `here's the deal:\n`;
-  t += `1. tap <b>/new</b> — pick a name, get a project\n`;
-  t += `2. open the <b>pass-link</b> with Claude\n`;
-  t += `3. tell Claude what to build — it ships\n\n`;
-  t += `every project gets a live URL, version history, and an optional Telegram bot with analytics.\n\n`;
-  t += `ready? → /new`;
+  let t = `<b>Hub</b>\n\n`;
+  t += `hey ${esc(name)}\n\n`;
+  t += `make and manage your AI agents, bots, apps, games, sites — all from one chat.\n\n`;
+  t += `tap <b>/new</b> to start. you'll need a bot token from @BotFather.\n\n`;
+  t += `more at hub.labs.co`;
   return t;
 }
 
-// v0.8: refreshed help
 function helpText() {
-  let t = '<b>how Drafts works</b>\n\n';
-  t += '<b>/new</b> — make a project. you get a name, a live URL, and a pass-link.\n\n';
-  t += 'open the pass-link in Claude (browser or Chrome extension). Claude reads what is there and builds whatever you ask. each commit auto-saves a version.\n\n';
-  t += '<b>/projects</b> — see what you got. tap any to open the dashboard.\n\n';
-  t += 'from the dashboard you can:\n';
-  t += '· share with collaborators (agents)\n';
-  t += '· attach a Telegram bot to your project\n';
-  t += '· forward bot messages to your own webhook\n';
-  t += '· see analytics: users, languages, countries, peak hours\n';
-  t += '· download all data as JSON anytime\n';
-  t += '· enable GitHub auto-sync\n\n';
-  t += 'need a bot? → @BotFather → /newbot → paste token in dashboard\n\n';
-  t += 'stuck? press /start.';
+  let t = '<b>how Hub works</b>\n\n';
+  t += 'Hub is where you make and manage everything: AI agents, bots, apps, games, sites — all from this chat.\n\n';
+  t += '<b>/new</b> — start a new project. paste a bot token from @BotFather and Hub does the rest.\n\n';
+  t += '<b>/my</b> — see what you have.\n\n';
+  t += '<b>/hub</b> — open the dashboard.\n\n';
+  t += 'no bot yet? open @BotFather, /newbot, copy the token, paste it here.\n\n';
+  t += 'more at hub.labs.co';
   return t;
 }
 
 function projectsListText(user) {
   if (!user || user.bindings.length === 0) {
-    return 'nothing here yet. /new to start ✨';
+    return 'nothing here yet. /new to start.';
   }
-  let t = '<b>your stuff</b>\n\n';
+  let t = '<b>your projects</b>\n\n';
   for (const b of user.bindings) {
     t += `${tierBadge(b.tier)}`;
     if (b.project_name) t += ` · <code>${esc(b.project_name)}</code>`;
@@ -512,13 +501,13 @@ async function actuallyCreateProject(chatId, user, name) {
   }
   const owner = user.tg_username || user.first_name || ('user_' + user.tg_user_id);
   try {
-    const res = await serverHelpers.createProject({ name, description: 'Created via Telepath by ' + owner });
+    const res = await serverHelpers.createProject({ name, description: 'Created via Hub by ' + owner });
     bindToken(user.tg_user_id, { tier: 'pap', token: res.pap_token, project: { name: res.project } });
     const html =
-      '🎉 <b>it\'s yours</b>\n\n' +
+      '<b>done</b>\n\n' +
       `<code>${esc(res.project)}</code>\n` +
       `→ <a href="${esc(res.live_url)}">${esc(res.live_url)}</a>\n\n` +
-      'tap below to open the dashboard, then talk to Claude to build.';
+      'tap below to open the dashboard.';
     await tgSend(chatId, html, {
       reply_markup: { inline_keyboard: dashboardKeyboardForBinding({ tier: 'pap', token: res.pap_token, project_name: res.project }) },
     });
@@ -565,6 +554,8 @@ async function handleMessage(msg) {
     if (cmd === '/start')    return await sendStart(chatId, user);
     if (cmd === '/help')     return await sendHelp(chatId);
     if (cmd === '/projects') return await sendProjects(chatId, user);
+    if (cmd === '/my')       return await sendProjects(chatId, user);
+    if (cmd === '/hub')      return await sendHubOverview(chatId, user);
     if (cmd === '/forget')   return await sendForgetMenu(chatId, user);
     if (cmd === '/new')      return await handleNewCommand(chatId, user, parts.slice(1).join(' '));
     if (cmd === '/cancel') {
@@ -630,7 +621,7 @@ async function handleMessage(msg) {
   }
 
   await tgSend(chatId,
-    "didn't catch that.\n\n/new to make one, or paste a <code>pap_…</code> / <code>aap_…</code>"
+    "didn't catch that.\n\n/new to make one, /my to see what you have."
   );
 }
 
@@ -717,6 +708,17 @@ async function handleCallback(cq) {
 
 async function sendStart(chatId, user) { await tgSend(chatId, welcomeText(user)); }
 async function sendHelp(chatId) { await tgSend(chatId, helpText()); }
+async function sendHubOverview(chatId, user) {
+  const count = (user && user.bindings) ? user.bindings.length : 0;
+  let t = '<b>Hub</b>\n\n';
+  if (count > 0) {
+    t += `you have ${count} project${count === 1 ? '' : 's'}. /my to see them.\n\n`;
+  } else {
+    t += 'no projects yet. /new to start.\n\n';
+  }
+  t += 'more at hub.labs.co';
+  await tgSend(chatId, t);
+}
 const PROJECTS_PAGE_SIZE = 8;
 function renderProjectsView(user, page) {
   const bindings = (user && user.bindings) || [];
@@ -799,21 +801,17 @@ async function refreshBotMe() {
 async function configureBotProfile() {
   if (!TBP || !TBP.token) return;
   const commands = [
-    { command: 'new',      description: '✨ start a project' },
-    { command: 'projects', description: '📁 your projects' },
-    { command: 'help',     description: '💡 how it works' },
-    { command: 'notif',    description: '🔔 notifications on/off' },
-    { command: 'forget',   description: '🗑 drop a token' },
-    { command: 'cancel',   description: 'cancel current action' },
-    { command: 'start',    description: 'welcome' },
+    { command: 'new',  description: 'Make something new' },
+    { command: 'my',   description: 'What you have' },
+    { command: 'hub',  description: 'Open Hub' },
+    { command: 'help', description: 'How it works' },
   ];
-  const name = 'Drafts';
-  const shortDesc = 'Build websites, mini-apps, and Telegram bots by talking to Claude. No code. Premium only.';
+  const name = 'Hub';
+  const shortDesc = 'Make and manage AI agents, bots, apps, games, sites from one chat. hub.labs.co';
   const longDesc =
-    'Drafts turns Telegram into your build space.\n\n' +
-    '/new makes a project — you get a live URL and a link for Claude. Tell Claude what to build, it ships. Every change is auto-versioned, so nothing is ever lost.\n\n' +
-    'Want a Telegram bot for your project? Tap link bot in the dashboard — you get a custom @bot in seconds, with full analytics on who is using it.\n\n' +
-    'Premium-only. Free to use forever.';
+    'Hub. Make and manage your AI agents, bots, apps, games, sites - all from one chat.\n\n' +
+    'Free.\n' +
+    'hub.labs.co';
   try {
     await tgApi('setMyName', { name });
     await tgApi('setMyCommands', { commands });
@@ -1120,8 +1118,8 @@ function mountRoutes(app) {
     if (message) {
       const ctrlBot = getControlBotUsername();
       const attribution = ctrlBot
-        ? `\n\n<i>Built with Drafts → @${esc(ctrlBot)}</i>`
-        : '\n\n<i>Built with Drafts</i>';
+        ? `\n\n<i>Built with Hub → @${esc(ctrlBot)}</i>`
+        : '\n\n<i>Built with Hub</i>';
       html = esc(message).replace(/\n/g, '\n') + attribution;
     }
     try {
@@ -1266,7 +1264,7 @@ function renderWebAppShell(tier, token) {
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Drafts</title>
+<title>Hub</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root { color-scheme: dark light; }
@@ -1464,7 +1462,7 @@ input:focus, textarea:focus { outline:none; border-color:var(--tg-theme-button-c
     h += '<a class="btn" href="'+p.live_url+'" target="_blank">🌐 live</a>';
     if (!__sapNavStack) h += '<button class="btn ghost" id="copyPass">🔗 pass-link</button>';
     h += '</div>';
-    if (!__sapNavStack) h += '<div class="muted" style="margin-top:10px">pass-link is what you share with Claude to build. tap to copy.</div>';
+    if (!__sapNavStack) h += '<div class="muted" style="margin-top:10px">pass-link opens the project in your AI assistant. tap to copy.</div>';
     h += '</div>';
 
     // Bot card
@@ -1876,7 +1874,7 @@ input:focus, textarea:focus { outline:none; border-color:var(--tg-theme-button-c
     const p = d.project;
     let h = '<h1>'+esc(p.name)+'</h1><div class="sub">agent: '+esc(d.aap.name||d.aap.id)+'</div>';
     h += '<div class="card"><h3>your branch</h3>';
-    h += '<div class="muted" style="margin-bottom:10px">open this pass-link in Claude. your work goes to <code>'+esc(d.aap.branch)+'</code>.</div>';
+    h += '<div class="muted" style="margin-bottom:10px">open this pass-link in your AI assistant. your work goes to <code>'+esc(d.aap.branch)+'</code>.</div>';
     h += '<div class="actions">';
     h += '<button class="btn" id="copyPass">🔗 pass-link</button>';
     h += '<a class="btn ghost" href="'+p.live_url+'" target="_blank">🌐 live</a>';
