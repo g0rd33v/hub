@@ -311,9 +311,9 @@ function isAllowed(tgFrom, user) {
 }
 
 const PREMIUM_REFUSAL =
-  '<b>Premium only ✨</b>\n\n' +
-  'Drafts is free, but you need Telegram Premium to use it.\n' +
-  'Upgrade in Telegram Settings → Premium.';
+  '<b>Hub is for Telegram Premium✨</b>\n\n' +
+  'Hub is free, but for Telegram Premium accounts right now.\n\n' +
+  'hub.labs.co';
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
