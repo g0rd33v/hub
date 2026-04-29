@@ -300,6 +300,33 @@ export function hasBotJs(projectName) {
   return fs.existsSync(livePath);
 }
 
+// v1.0.1: shared KV opener for routes.js handlers — returns the SAME kv
+// instance bot.js sees (if loaded), or opens it on demand.
+// Critical: bot.js and routes.js MUST see the same data.
+export function getOrOpenKv(projectName) {
+  const cached = registry.get(projectName);
+  if (cached && cached.kv) return cached.kv;
+  return openKv(projectName);
+}
+
+// v1.0.1: shared logger for routes.js — same ring buffer bot.js uses, so all
+// log lines for a project show up in one stream.
+export function getOrMakeLogger(projectName) {
+  const cached = registry.get(projectName);
+  if (cached && cached.logs) return cached.logs;
+  // Stand up a new logger and stash a partial entry so subsequent bot.js
+  // load can pick up the same ring.
+  const logger = makeLogger();
+  registry.set(projectName, {
+    module: null,
+    mtime: null,
+    kv: null,
+    logs: logger,
+    importErr: null,
+  });
+  return logger;
+}
+
 export async function ensureLoaded(projectName) {
   if (!hasBotJs(projectName)) {
     if (registry.has(projectName)) registry.delete(projectName);

@@ -27,6 +27,7 @@ import dotenv from 'dotenv';
 import { buildRichContext } from "./rich-context.js";
 import { initTelegram, mountTelegramRoutes, hooks as telegramHooks, getTelegramStatus } from "./telegram.js";
 import * as runtime from './runtime.js';
+import * as projectRoutes from './project-routes.js';
 import { initProjectBots, projectBotsApi } from "./project-bots.js";
 import { startDailySnapshotScheduler } from "./analytics.js";
 
@@ -455,6 +456,7 @@ app.get('/drafts/health', (req, res) => {
     server_number: SERVER_NUMBER,
     telegram_available: TELEGRAM_AVAILABLE,
     runtime_capability: true,
+    routes_capability: true,
     project_bots_capability: TELEGRAM_AVAILABLE,
     telepath: tp,
     project_bots: { total: projectBotsCount, in_webhook_mode: webhookBotsCount, analytics_enabled: analyticsEnabledCount },
@@ -1126,6 +1128,7 @@ function renderPage({ tier, token, project, aap, versions = [] }) {
     telepath: tpStatus.installed ? { bot_username: tpStatus.bot && tpStatus.bot.username, polling: tpStatus.polling } : { installed: false },
     telegram_available: TELEGRAM_AVAILABLE,
     runtime_capability: true,
+    routes_capability: true,
     url_scheme: project ? {
       live: `${PUBLIC_BASE}/${project.name}/`,
       version: `${PUBLIC_BASE}/${project.name}/v/<N>/`,
@@ -1558,6 +1561,14 @@ app.delete('/drafts/project/bot/logs', authPAPorSAP, (req, res) => {
   res.json({ ok: true, cleared: true });
 });
 
+// v1.1: routes.js status — shows whether routes.js is loaded, any load error,
+// and the list of registered METHOD+path keys for this project.
+app.get('/drafts/project/routes', authPAPorSAP, (req, res) => {
+  const p = req.project || findProjectByName(sanitizeName(req.query.project || ''));
+  if (!p) return res.status(400).json({ ok: false, error: 'no_project_context' });
+  res.json({ ok: true, project: p.name, routes: projectRoutes.getRoutesStatus(p.name) });
+});
+
 
 app.post('/drafts/aaps', authPAPorSAP, async (req, res) => {
   const p = req.project || findProjectByName(sanitizeName(req.body.project || ''));
@@ -1899,19 +1910,32 @@ function isProjectName(slug) {
   return !!findProjectByName(slug);
 }
 
-app.use((req, res, next) => {
-  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+app.use(async (req, res, next) => {
+  // Allow GET/HEAD as before, plus POST/PUT/DELETE/PATCH so routes.js can
+  // accept arbitrary HTTP methods. Method gate against routes.js happens
+  // inside the dispatcher.
+  const isReadMethod = (req.method === 'GET' || req.method === 'HEAD');
+  const isWriteMethod = (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE' || req.method === 'PATCH');
+  if (!isReadMethod && !isWriteMethod) return next();
+
   const url = req.path;
-  if (url.startsWith('/drafts/') || url.startsWith('/m/') || url.startsWith('/telepath/')) return next();
+  if (url.startsWith('/drafts/') || url.startsWith('/m/') || url.startsWith('/telepath/') || url.startsWith('/signin/')) return next();
   const m = url.match(/^\/([a-z0-9_-]+)(\/.*)?$/);
   if (!m) return next();
   const name = m[1];
   const rest = m[2] || '';
   if (!isProjectName(name)) return next();
-  if (rest === '') return res.redirect(301, `/${name}/`);
+  if (rest === '' && isReadMethod) return res.redirect(301, `/${name}/`);
+  if (rest === '' && isWriteMethod) {
+    // POST /<project> with no path  let it fall through to routes.js below
+    // by treating rest as "/"
+  }
   const pp = projectPaths(name);
+
+  // Version snapshots only support GET/HEAD
   const vm = rest.match(/^\/v\/(\d+)(\/.*)?$/);
   if (vm) {
+    if (!isReadMethod) return res.status(405).type('text/plain').send('version snapshots are read-only');
     const N = vm[1];
     const subRest = vm[2];
     const versionDir = path.join(pp.versions, N);
@@ -1919,6 +1943,48 @@ app.use((req, res, next) => {
     if (subRest === undefined) return res.redirect(301, `/${name}/v/${N}/`);
     return serveStatic(versionDir, subRest.replace(/^\/+/, ''), res);
   }
+
+  // routes.js dispatch — try BEFORE static serve and BEFORE fallback landing.
+  // Falls through if no routes.js or no matching route.
+  if (projectRoutes.hasRoutesJs(name)) {
+    try {
+      const project = findProjectByName(name);
+      const projectName = name;
+      const logger = runtime.getOrMakeLogger(projectName);
+      const kvForProject = runtime.getOrOpenKv(projectName);
+      const fullUrl = `${PUBLIC_BASE}${req.originalUrl || req.url}`;
+      const pathname = '/' + rest.replace(/^\/+/, '');
+      const xff = req.headers['x-forwarded-for'];
+      const reqIp = (typeof xff === 'string' ? xff.split(',')[0].trim() : null) || req.ip || null;
+
+      const out = await projectRoutes.tryDispatch({
+        project,
+        projectName,
+        kvForProject,
+        logger,
+        expressReq: req,
+        fullUrl,
+        pathname,
+        method: req.method,
+        getReqIp: () => reqIp,
+      });
+      if (out && out.matched) {
+        // Apply headers, status, body
+        for (const [k, v] of Object.entries(out.headers || {})) res.set(k, v);
+        // Don't cache API responses unless handler set it
+        if (!res.get('cache-control')) res.set('Cache-Control', 'no-store');
+        return res.status(out.status).send(out.body);
+      }
+      // Not matched — fall through.
+    } catch (e) {
+      console.error('[routes.js dispatch] error on ' + name + ' ' + req.method + ' ' + url + ':', e.message);
+      return res.status(500).type('text/plain').send('internal error in routes dispatcher');
+    }
+  }
+
+  // No routes.js or no match. Past here only GET/HEAD makes sense for static.
+  if (!isReadMethod) return res.status(405).type('text/plain').send('method not allowed (no matching route)');
+
   // Hub fallback landing: project exists in state but has no index.html (or no live dir)
   const isRoot = (rest === '' || rest === '/');
   const projectExists = !!findProjectByName(name);
