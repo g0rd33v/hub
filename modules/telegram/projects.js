@@ -15,7 +15,7 @@ async function tgApi(token, method, params = {}) {
   return res.json();
 }
 
-function getBotStatus(project) {
+export function getBotStatus(project) {
   const b = project.bot;
   if (!b?.token) return { attached: false };
   return {
@@ -44,12 +44,9 @@ async function startProjectPolling(project) {
         for (const update of result.result) {
           offset = update.update_id + 1;
           try {
-            // Analytics
             if (project.bot.analytics_enabled !== false)
               _ctx.modules.analytics?.recordUpdate(name, update);
-            // Subscriber tracking (/start, /stop)
             trackSubscriber(project, update);
-            // bot.json mode
             if (!project.bot.webhook_url) {
               const handled = await _ctx.modules.runtime?.dispatchBotUpdate(project, update);
               if (!handled?.handled) await defaultReply(token, update, project);
@@ -67,7 +64,7 @@ async function startProjectPolling(project) {
   log.info('polling started');
 }
 
-function stopProjectPolling(name) {
+export function stopProjectPolling(name) {
   const entry = pollingBots.get(name);
   if (entry) { clearInterval(entry.interval); pollingBots.delete(name); }
 }
@@ -157,7 +154,6 @@ export async function broadcast(project, html) {
 
 export async function init(ctx) {
   _ctx = ctx;
-  // Start polling for all projects that have bots
   const state = ctx.modules.drafts?.getState();
   if (state) {
     for (const p of state.projects) {
@@ -168,5 +164,3 @@ export async function init(ctx) {
   }
   ctx.logger.info('[telegram/projects] ready, bots started:', pollingBots.size);
 }
-
-export { getBotStatus, installBot, unlinkBot, broadcast, stopProjectPolling };
