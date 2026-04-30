@@ -1,5 +1,4 @@
 // modules/telegram/master.js — @LabsHubBot
-// Inline keyboard with web_app buttons for SAP/PAP dashboards
 import fs   from 'fs';
 import path from 'path';
 
@@ -54,7 +53,7 @@ function saveOwner(chatId) {
 function isOwner(chatId) { return !!_ownerChatId && String(chatId) === _ownerChatId; }
 function readSAP()       { try { return fs.readFileSync('/etc/hub/sap.token','utf8').trim(); } catch { return ''; } }
 
-// ─── Telegram API ─────────────────────────────────────────────────────────────
+// —— Telegram API ——
 
 async function tg(token, method, params = {}) {
   const res = await fetch('https://api.telegram.org/bot'+token+'/'+method, {
@@ -70,32 +69,32 @@ async function send(token, chatId, text, extra = {}) {
   });
 }
 
-async function answerCallback(token, id, text = '') {
-  return tg(token, 'answerCallbackQuery', { callback_query_id: id, text });
+async function answerCallback(token, callbackId, text = '') {
+  return tg(token, 'answerCallbackQuery', { callback_query_id: callbackId, text });
 }
 
-// Build keyboard. Each button can be:
-//   { text, url }         → opens URL in browser
-//   { text, web_app }     → opens Telegram Mini App  { url }
-// Pass flat array → each button on its own row
-// Pass nested array → rows as-is
+// Build inline keyboard rows.
+// Each item: { text, url } for plain link, or { text, web_app_url } for Mini App,
+//            or array of such items for a multi-column row.
 function kbd(buttons) {
-  const rows = buttons.map(b => Array.isArray(b) ? b : [b]);
+  const rows = buttons.map(b => {
+    if (Array.isArray(b)) {
+      return b.map(btn => mkBtn(btn));
+    }
+    return [mkBtn(b)];
+  });
   return { inline_keyboard: rows };
 }
 
-// Build a web_app button (opens Mini App inside Telegram)
-function webAppBtn(text, url) {
-  return { text, web_app: { url } };
+function mkBtn(b) {
+  if (b.web_app_url) return { text: b.text, web_app: { url: b.web_app_url } };
+  return { text: b.text, url: b.url };
 }
 
-// Build a URL button (opens in browser)
-function urlBtn(text, url) {
-  return { text, url };
-}
-
+// Build webapp URL for a given pass token
 function webappUrl(token) {
-  return _ctx.config.publicBase + '/hub/webapp?token=' + encodeURIComponent(token);
+  const base = _ctx.config.publicBase;
+  return `${base}/hub/webapp?token=${encodeURIComponent(token)}`;
 }
 
 async function setCommands(token, ownerChatId) {
@@ -110,7 +109,7 @@ async function setCommands(token, ownerChatId) {
   if (ownerChatId) {
     await tg(token, 'setMyCommands', {
       commands: [...common,
-        { command: 'signin', description: 'Server root dashboard link' },
+        { command: 'signin', description: 'Server root signin link' },
         { command: 'id',     description: 'Your Telegram chat ID' },
       ],
       scope: { type: 'chat', chat_id: Number(ownerChatId) },
@@ -118,7 +117,7 @@ async function setCommands(token, ownerChatId) {
   }
 }
 
-// ─── Polling ──────────────────────────────────────────────────────────────────
+// —— polling ——
 
 async function startPolling(token) {
   _polling = true;
@@ -142,7 +141,7 @@ async function startPolling(token) {
   }
 }
 
-// ─── Dispatch ─────────────────────────────────────────────────────────────────
+// —— dispatch ——
 
 async function dispatch(token, upd) {
   if (upd.callback_query) {
@@ -174,26 +173,31 @@ async function dispatch(token, upd) {
     case '/hub':    return handleHub(token, chatId, owner);
     case '/help':   return handleHelp(token, chatId, owner);
     case '/start':  return handleStart(token, chatId, owner);
-    case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. Send /help.');
-    default:        return send(token, chatId, 'Unknown command. Send /help.');
+    case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. Send /help for the list.');
+    default:        return send(token, chatId, 'Unknown command. Send /help for the list.');
   }
 }
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
+// —— handlers ——
 
 async function handleStart(token, chatId, owner) {
   const base = _ctx.config.publicBase;
   if (!owner) {
     return send(token, chatId,
-      `<b>Hub</b> \u2014 connect everything. Manage from chat.\n\nHub lets you run bots, sites, apps and APIs \u2014 all from one place.`,
-      { reply_markup: kbd([urlBtn('hub.labs.co', base)]) }
+      `<b>Hub</b> \u2014 connect everything. Manage from chat.\n\n`+
+      `Hub lets you run bots, sites, apps and APIs \u2014 all from one place.\n\n`+
+      `/new \u2014 create a project\n/hub \u2014 hub status\n/help \u2014 help`,
+      { reply_markup: kbd([{ text: 'hub.labs.co \u2192', url: base }]) }
     );
   }
   const state = _ctx.modules.drafts?.getState() || { projects: [] };
   const count = state.projects.length;
   const bots  = state.projects.filter(p => p.bot?.token).length;
   return send(token, chatId,
-    `<b>Hub</b> \u2014 running.\n\n<b>${count}</b> project${count!==1?'s':''} \u00b7 <b>${bots}</b> bot${bots!==1?'s':''} active\nServer: <code>${base}</code>\n\n/my \u2014 projects + dashboards\n/hub \u2014 hub status`
+    `<b>Hub</b> \u2014 running.\n\n`+
+    `<b>${count}</b> project${count!==1?'s':''} \u00b7 <b>${bots}</b> bot${bots!==1?'s':''} active\n`+
+    `Server: <code>${base}</code>\n\n`+
+    `/my \u2014 projects + dashboards\n/hub \u2014 hub status`
   );
 }
 
@@ -213,14 +217,16 @@ async function handleNew(token, chatId, args) {
       const papSecret = data.pap_activation_url?.split('_project_')[1];
       const base = _ctx.config.publicBase;
       const sn   = _ctx.config.serverNumber;
-      const waUrl  = papSecret ? webappUrl('pass_'+sn+'_project_'+papSecret) : null;
-      const liveUrl = data.live_url;
+      const passToken = papSecret ? `pass_${sn}_project_${papSecret}` : null;
       const buttons = [
-        [urlBtn('\u25b6 Open live', liveUrl)],
+        [{ text: '\u25b6 Open live', url: data.live_url }],
       ];
-      if (waUrl) buttons.push([webAppBtn('\u2699 Open dashboard', waUrl)]);
+      if (passToken) {
+        // webapp opens Mini App inline, fallback url for browsers
+        buttons[0].push({ text: '\u2699 Dashboard', web_app_url: webappUrl(passToken) });
+      }
       return send(token, chatId,
-        `<b>${name}</b> created.\n\nLive: <a href="${liveUrl}">${liveUrl}</a>`,
+        `<b>${name}</b> created.\n\nLive: <a href="${data.live_url}">${data.live_url}</a>`,
         { reply_markup: kbd(buttons) }
       );
     }
@@ -240,19 +246,24 @@ async function handleMy(token, chatId, owner) {
 
   const buttons = [];
 
-  // Owner: server dashboard first (Mini App)
+  // Owner: server dashboard as Mini App
   if (owner && sap) {
-    buttons.push(webAppBtn('\u2609 Hub Server dashboard', webappUrl('pass_'+sn+'_server_'+sap)));
+    const sapPassToken = `pass_${sn}_server_${sap}`;
+    buttons.push({ text: '\u2609 Hub Server', web_app_url: webappUrl(sapPassToken) });
   }
 
-  // Per-project: one row [Live] [Dashboard (Mini App)]
+  // One row per project: [Live URL] [Dashboard Mini App]
   for (const p of state.projects) {
     const papSecret = p.pap?.token?.replace(/^pap_/,'');
-    const liveUrl   = base + '/' + p.name + '/';
+    const liveUrl   = `${base}/${p.name}/`;
     const label     = p.description || p.name;
-    const botTag    = p.bot?.token ? ' @'+p.bot.bot_username : '';
-    const row = [urlBtn('\u25b6 '+label+botTag, liveUrl)];
-    if (papSecret && owner) row.push(webAppBtn('\u2699', webappUrl('pass_'+sn+'_project_'+papSecret)));
+    const botTag    = p.bot?.token ? ` \u00b7 @${p.bot.bot_username}` : '';
+    const passToken = papSecret ? `pass_${sn}_project_${papSecret}` : null;
+
+    const row = [{ text: `\u25b6 ${label}${botTag}`, url: liveUrl }];
+    if (passToken) {
+      row.push({ text: '\u2699 dashboard', web_app_url: webappUrl(passToken) });
+    }
     buttons.push(row);
   }
 
@@ -276,23 +287,29 @@ async function handleHub(token, chatId, owner) {
     const sn    = _ctx.config.serverNumber;
     const sap   = readSAP();
 
-    const text = `<b>Hub ${h.version}</b> \u2014 ${h.ok?'online':'degraded'}\n\nModules: ${h.modules.join(', ')}\nProjects: ${state.projects.length} \u00b7 Bots: ${bots}\nUptime: ${upMin}m`;
+    const text = `<b>Hub ${h.version}</b> \u2014 ${h.ok?'online':'degraded'}\n\n`+
+      `Modules: ${h.modules.join(', ')}\n`+
+      `Projects: ${state.projects.length} \u00b7 Bots: ${bots}\n`+
+      `Uptime: ${upMin}m\n`+
+      `Server: ${base}`;
 
     const buttons = [];
     if (owner && sap) {
-      // Server Mini App dashboard
-      buttons.push(webAppBtn('\u2609 Server dashboard', webappUrl('pass_'+sn+'_server_'+sap)));
-      // Per-project Mini App dashboards
+      // Server dashboard as Mini App
+      const sapPassToken = `pass_${sn}_server_${sap}`;
+      buttons.push({ text: '\u2609 Server dashboard', web_app_url: webappUrl(sapPassToken) });
+      // Each project dashboard as Mini App
       for (const p of state.projects) {
         const papSecret = p.pap?.token?.replace(/^pap_/,'');
         if (papSecret) {
-          const label = p.description || p.name;
-          const botTag = p.bot?.token ? ' @'+p.bot.bot_username : '';
-          buttons.push(webAppBtn('\u2699 '+label+botTag, webappUrl('pass_'+sn+'_project_'+papSecret)));
+          const label  = p.description || p.name;
+          const botTag = p.bot?.token ? ` @${p.bot.bot_username}` : '';
+          const passToken = `pass_${sn}_project_${papSecret}`;
+          buttons.push({ text: `\u2699 ${label}${botTag}`, web_app_url: webappUrl(passToken) });
         }
       }
     } else {
-      buttons.push(urlBtn('hub.labs.co', base));
+      buttons.push({ text: 'hub.labs.co \u2192', url: base });
     }
 
     return send(token, chatId, text, { reply_markup: kbd(buttons) });
@@ -300,22 +317,28 @@ async function handleHub(token, chatId, owner) {
 }
 
 async function handleHelp(token, chatId, owner) {
-  let text = `<b>Hub commands</b>\n\n/new name \u2014 create a project\n/my \u2014 projects + dashboards\n/hub \u2014 hub status\n/help \u2014 this list\n/start \u2014 start`;
+  let text = `<b>Hub commands</b>\n\n`+
+    `/new name \u2014 create a project\n`+
+    `/my \u2014 my projects and dashboards\n`+
+    `/hub \u2014 hub status\n`+
+    `/help \u2014 this list\n`+
+    `/start \u2014 start`;
   if (owner) text += `\n\n<b>Owner only</b>\n/signin \u2014 server root link\n/id \u2014 your chat ID`;
   return send(token, chatId, text);
 }
 
 async function handleSignin(token, chatId) {
-  const sap = readSAP();
-  const sn  = _ctx.config.serverNumber;
-  const url = webappUrl('pass_'+sn+'_server_'+sap);
+  const sap  = readSAP();
+  const base = _ctx.config.publicBase;
+  const sn   = _ctx.config.serverNumber;
+  const passToken = `pass_${sn}_server_${sap}`;
   return send(token, chatId,
     `Server dashboard:\n\n<i>Full server access. Don't share.</i>`,
-    { reply_markup: kbd([webAppBtn('\u2609 Open server dashboard', url)]) }
+    { reply_markup: kbd([{ text: '\u2609 Open server dashboard', web_app_url: webappUrl(passToken) }]) }
   );
 }
 
-// ─── Module contract ──────────────────────────────────────────────────────────
+// —— module contract ——
 
 export function getTelegramStatus() {
   return { installed: !!loadToken(), bot: _botInfo||null, polling: _polling };
