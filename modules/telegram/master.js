@@ -1,9 +1,4 @@
 // modules/telegram/master.js — @LabsHubBot master coordinator
-//
-// Owner claim: first /start OR anyone sending /claim <sap> gets owner rights.
-// Owner stored in /etc/hub/owner.id.
-// /id always replies with the sender's chat_id (useful for setup).
-
 import fs from 'fs';
 import path from 'path';
 
@@ -22,8 +17,6 @@ export const hooks = {
   onAAPMerged:       () => {},
   onNewAAPCreated:   () => {},
 };
-
-// --- token + owner ---
 
 function tokenPath() { return _ctx.paths.masterBotToken(); }
 function ownerPath() { return path.join(_ctx.config.configDir, 'owner.id'); }
@@ -75,8 +68,6 @@ function require_sap() {
   try { return fs.readFileSync('/etc/hub/sap.token', 'utf8').trim(); } catch { return ''; }
 }
 
-// --- Telegram API ---
-
 async function tg(token, method, params = {}) {
   const res = await fetch('https://api.telegram.org/bot' + token + '/' + method, {
     method: 'POST',
@@ -99,18 +90,17 @@ async function send(token, chatId, text, extra = {}) {
 async function setCommands(token) {
   await tg(token, 'setMyCommands', {
     commands: [
-      { command: 'start',    description: 'Status overview' },
-      { command: 'projects', description: 'List all projects' },
-      { command: 'new',      description: 'Create project: /new name' },
-      { command: 'signin',   description: 'Get your server signin link' },
-      { command: 'status',   description: 'Server health' },
-      { command: 'help',     description: 'Command list' },
+      { command: 'start',      description: 'Status overview' },
+      { command: 'dashboards', description: 'Dashboard links for all projects' },
+      { command: 'projects',   description: 'List all projects' },
+      { command: 'new',        description: 'Create project: /new name' },
+      { command: 'signin',     description: 'Get server root link' },
+      { command: 'status',     description: 'Server health' },
+      { command: 'help',       description: 'Command list' },
     ],
     scope: { type: 'all_private_chats' },
   });
 }
-
-// --- polling ---
 
 async function startPolling(token) {
   _polling = true;
@@ -134,8 +124,6 @@ async function startPolling(token) {
   }
 }
 
-// --- dispatch ---
-
 async function dispatch(token, upd) {
   const msg = upd.message;
   if (!msg?.text) return;
@@ -145,15 +133,13 @@ async function dispatch(token, upd) {
   const cmd    = parts[0].replace(/@.*$/, '').toLowerCase();
   const args   = parts.slice(1).join(' ');
 
-  // /id — always works, tells the user their chat_id
   if (cmd === '/id') {
     return send(token, chatId, `Your chat ID: <code>${chatId}</code>`);
   }
 
-  // /claim <sap> — claim ownership by proving you know the SAP
   if (cmd === '/claim') {
     const sap = require_sap();
-    if (!sap) return send(token, chatId, 'SAP not configured on this server.');
+    if (!sap) return send(token, chatId, 'SAP not configured.');
     if (args.trim() === sap) {
       saveOwner(chatId);
       return send(token, chatId, '✓ You are now the owner of this Hub server.');
@@ -161,7 +147,6 @@ async function dispatch(token, upd) {
     return send(token, chatId, 'Wrong token.');
   }
 
-  // first /start with no owner → auto-claim
   if (!_ownerChatId && cmd === '/start') {
     saveOwner(chatId);
     return handleOwnerStart(token, chatId);
@@ -169,20 +154,19 @@ async function dispatch(token, upd) {
 
   if (isOwner(chatId)) {
     switch (cmd) {
-      case '/start':    return handleOwnerStart(token, chatId);
-      case '/projects': return handleProjects(token, chatId);
-      case '/new':      return handleNew(token, chatId, args);
-      case '/signin':   return handleSignin(token, chatId);
-      case '/status':   return handleStatus(token, chatId);
-      case '/help':     return handleOwnerHelp(token, chatId);
-      default:          return send(token, chatId, `Unknown command. Send /help for the list.`);
+      case '/start':      return handleOwnerStart(token, chatId);
+      case '/dashboards': return handleDashboards(token, chatId);
+      case '/projects':   return handleProjects(token, chatId);
+      case '/new':        return handleNew(token, chatId, args);
+      case '/signin':     return handleSignin(token, chatId);
+      case '/status':     return handleStatus(token, chatId);
+      case '/help':       return handleOwnerHelp(token, chatId);
+      default:            return send(token, chatId, `Unknown command. Send /help for the list.`);
     }
   }
 
   return handlePublic(token, chatId);
 }
-
-// --- owner handlers ---
 
 async function handleOwnerStart(token, chatId) {
   const state    = _ctx.modules.drafts?.getState() || { projects: [] };
@@ -197,9 +181,40 @@ async function handleOwnerStart(token, chatId) {
     `<b>${count}</b> project${count !== 1 ? 's' : ''}  ·  <b>${botCount}</b> bot${botCount !== 1 ? 's' : ''} active\n` +
     `Server: <code>${base}</code>\n\n` +
     `<a href="${signinUrl}">Open server dashboard</a>\n\n` +
+    `/dashboards — all project dashboards\n` +
     `/projects — list everything\n` +
     `/new name — create project\n` +
     `/status — health check`
+  );
+}
+
+async function handleDashboards(token, chatId) {
+  const state = _ctx.modules.drafts?.getState() || { projects: [] };
+  const base  = _ctx.config.publicBase;
+  const sn    = _ctx.config.serverNumber;
+  const sap   = require_sap();
+
+  // Server root
+  const serverUrl = `${base}/signin/pass_${sn}_server_${sap}`;
+
+  // Filter: only named projects (skip routestest and other test projects)
+  const SHOW = ['supermailbot', 'vasilisa21robot'];
+  const projects = state.projects.filter(p => SHOW.includes(p.name));
+
+  const lines = [
+    `• <b>Hub Server</b>\n<a href="${serverUrl}">${serverUrl}</a>`,
+  ];
+
+  for (const p of projects) {
+    const papSecret = p.pap?.token?.replace(/^pap_/, '');
+    const url = papSecret ? `${base}/signin/pass_${sn}_project_${papSecret}` : null;
+    const botTag = p.bot?.bot_username ? ` @${p.bot.bot_username}` : '';
+    const label = p.description || p.name;
+    if (url) lines.push(`• <b>${label}</b>${botTag}\n<a href="${url}">${url}</a>`);
+  }
+
+  return send(token, chatId,
+    `<b>Dashboards</b>\n\n` + lines.join('\n\n')
   );
 }
 
@@ -244,7 +259,7 @@ async function handleNew(token, chatId, args) {
       return send(token, chatId,
         `<b>${name}</b> created.\n\n` +
         `Live: <a href="${data.live_url}">${data.live_url}</a>\n` +
-        `Dashboard: <a href="${data.pap_activation_url}">open PAP</a>`
+        `Dashboard: <a href="${data.pap_activation_url}">open</a>`
       );
     }
     return send(token, chatId, `Failed: ${data.error}`);
@@ -258,7 +273,7 @@ async function handleSignin(token, chatId) {
   const base = _ctx.config.publicBase;
   const url  = `${base}/signin/pass_0_server_${sap}`;
   return send(token, chatId,
-    `Your server dashboard:\n<a href="${url}">${url}</a>\n\n<i>Full server access. Don't share.</i>`
+    `Server dashboard:\n<a href="${url}">${url}</a>\n\n<i>Full server access. Don't share.</i>`
   );
 }
 
@@ -285,9 +300,10 @@ async function handleOwnerHelp(token, chatId) {
   return send(token, chatId,
     `<b>Hub commands</b>\n\n` +
     `/start — status overview\n` +
-    `/projects — list all projects with links\n` +
+    `/dashboards — dashboard links for all projects\n` +
+    `/projects — list all projects\n` +
     `/new name — create a new project\n` +
-    `/signin — get your server dashboard link\n` +
+    `/signin — server root link\n` +
     `/status — server health\n` +
     `/help — this list\n` +
     `/id — your Telegram chat ID`
@@ -298,13 +314,10 @@ async function handlePublic(token, chatId) {
   const base = _ctx.config.publicBase;
   return send(token, chatId,
     `<b>Hub</b> — connect everything. Manage from chat.\n\n` +
-    `Hub lets you run bots, sites, apps, and APIs — all from one place. ` +
-    `Every project gets a live URL, git versioning, and a Telegram bot in one step.\n\n` +
+    `Hub lets you run bots, sites, apps, and APIs — all from one place.\n\n` +
     `<a href="${base}">${base}</a>`
   );
 }
-
-// --- module contract ---
 
 export function getTelegramStatus() {
   const token = loadToken();
@@ -322,7 +335,7 @@ export async function init(ctx) {
   if (!me.ok) { ctx.logger.warn('[master-bot] getMe failed:', me.description); return; }
   _botInfo = me.result;
   ctx.logger.info('[master-bot] connected as @' + _botInfo.username +
-    (_ownerChatId ? ` (owner: ${_ownerChatId})` : ' (no owner — send /claim <sap> to claim)'));
+    (_ownerChatId ? ` (owner: ${_ownerChatId})` : ' (no owner — send /claim <sap>)'));
 
   await setCommands(token).catch(() => {});
   startPolling(token).catch(e => ctx.logger.error('[master-bot] polling crashed:', e.message));
