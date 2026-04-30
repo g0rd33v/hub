@@ -55,6 +55,7 @@ function saveOwner(chatId) {
 const isOwner  = chatId => !!_ownerChatId && String(chatId) === _ownerChatId;
 const readSAP  = () => { try { return fs.readFileSync('/etc/hub/sap.token', 'utf8').trim(); } catch { return ''; } };
 const waUrl    = pass  => `${_ctx.config.publicBase}/hub/webapp?token=${encodeURIComponent(pass)}`;
+const wizUrl   = ()    => `${_ctx.config.publicBase}/hub/webapp?mode=wizard`;
 const kbd      = btns  => ({ inline_keyboard: btns.map(b => Array.isArray(b) ? b : [b]) });
 
 async function tg(token, method, params = {}) {
@@ -92,17 +93,6 @@ async function setCommands(token, ownerChatId) {
 }
 
 // ── Intake: recognise what the user sent ───────────────────────────────────────
-//
-// Patterns matched (in order):
-//  telegram_bot_token  — \d+:[A-Za-z0-9_-]{35,}
-//  pass_sap            — pass_N_server_HEX
-//  pass_pap            — pass_N_project_HEX  or  pap_HEX
-//  openrouter_key      — sk-or-v1-...
-//  openai_key          — sk-... (40+ chars)
-//  anthropic_key       — sk-ant-...
-//  url                 — https?://...
-//  project_name        — [a-z][a-z0-9_-]{1,39} (slug-like)
-//  unknown             — ask
 
 const PATTERNS = [
   { id: 'telegram_bot_token', re: /^\d{5,15}:[A-Za-z0-9_-]{35,}$/ },
@@ -117,9 +107,7 @@ const PATTERNS = [
 
 function recognise(text) {
   const t = text.trim();
-  for (const p of PATTERNS) {
-    if (p.re.test(t)) return { type: p.id, value: t };
-  }
+  for (const p of PATTERNS) if (p.re.test(t)) return { type: p.id, value: t };
   return { type: 'unknown', value: t };
 }
 
@@ -160,8 +148,7 @@ async function dispatch(token, upd) {
   const cmd    = parts[0].replace(/@.*$/, '').toLowerCase();
   const args   = parts.slice(1).join(' ').trim();
 
-  // Hard-coded owner commands
-  if (cmd === '/id')    return send(token, chatId, `Your ID: <code>${chatId}</code>`);
+  if (cmd === '/id') return send(token, chatId, `Your ID: <code>${chatId}</code>`);
   if (cmd === '/claim') {
     const sap = readSAP();
     if (!sap) return send(token, chatId, 'SAP not configured.');
@@ -171,8 +158,6 @@ async function dispatch(token, upd) {
   if (!_ownerChatId && cmd === '/start') { saveOwner(chatId); return handleStart(token, chatId, true); }
 
   const owner = isOwner(chatId);
-
-  // Named commands
   switch (cmd) {
     case '/start':  return handleStart(token, chatId, owner);
     case '/new':    return handleNew(token, chatId, args || null);
@@ -182,10 +167,8 @@ async function dispatch(token, upd) {
     case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. /help for the list.');
   }
 
-  // Any message that isn’t a slash command — route through intake
-  if (!cmd.startsWith('/')) {
-    return handleIntake(token, chatId, raw, owner);
-  }
+  // Any non-command message — route through intake
+  if (!cmd.startsWith('/')) return handleIntake(token, chatId, raw, owner);
 
   return send(token, chatId, 'Unknown command. /help for the list.');
 }
@@ -211,20 +194,29 @@ async function handleStart(token, chatId, owner) {
   );
 }
 
-// handleNew — called with /new [optional hint]
-// If hint provided: treat it as intake. If empty: show onboarding prompt.
+// handleNew — three entry points:
+// 1. Send anything — direct intake (token/key/url/name)
+// 2. Describe in words — AI builds a plan
+// 3. Wizard button — opens webapp with full form
 async function handleNew(token, chatId, hint) {
+  // If user sent a direct hint with /new <something>, route straight to intake
   if (hint) return handleIntake(token, chatId, hint, isOwner(chatId));
+
+  const sn  = _ctx.config.serverNumber;
+  const sap = readSAP();
 
   return send(token, chatId,
     `<b>Connect or create anything.</b>\n\n`+
-    `Just send me what you have and I\u2019ll figure it out:\n\n`+
-    `\u00b7 <b>Bot token</b> \u2014 connect a Telegram bot\n`+
-    `\u00b7 <b>Project name</b> \u2014 create a new project\n`+
-    `\u00b7 <b>API key</b> \u2014 OpenRouter, OpenAI, Anthropic\n`+
-    `\u00b7 <b>URL</b> \u2014 set as webhook endpoint\n`+
-    `\u00b7 <b>Pass link</b> \u2014 open a project dashboard\n\n`+
-    `<i>Send it now \u2014 one message is enough.</i>`
+    `Three ways to start:\n\n`+
+    `<b>1.</b> Just send me what you have \u2014 I\'ll figure it out.\n`+
+    `<i>Bot token, API key, project name, URL, pass link.</i>\n\n`+
+    `<b>2.</b> Describe what you want to build \u2014 I\'ll generate a project plan.\n`+
+    `<i>Example: \u201ca daily crypto price bot with AI summaries\u201d</i>\n\n`+
+    `<b>3.</b> Open the Wizard and fill in a form.\n`+
+    `<i>Hub will set up the project and tell you exactly what to connect.</i>`,
+    { reply_markup: kbd([
+        [{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }],
+    ]) }
   );
 }
 
@@ -236,154 +228,152 @@ async function handleIntake(token, chatId, text, owner) {
 
   switch (type) {
 
-    // ── Telegram bot token — need to know which project to attach to
+    // ── Telegram bot token
     case 'telegram_bot_token': {
-      // Validate token first
       let botInfo;
       try {
         const r = await tg(value, 'getMe');
-        if (!r.ok) return send(token, chatId, `\u274c That doesn\u2019t look like a valid bot token.\n\n<i>${r.description}</i>`);
+        if (!r.ok) return send(token, chatId, `\u274c Not a valid bot token.\n\n<i>${r.description}</i>`);
         botInfo = r.result;
-      } catch (e) {
-        return send(token, chatId, `\u274c Could not validate token: ${e.message}`);
-      }
+      } catch (e) { return send(token, chatId, `\u274c Could not validate: ${e.message}`); }
 
-      // Check if there\u2019s only one project — attach automatically
       const state = _ctx.modules.drafts?.getState() || { projects: [] };
-      const projsWithoutBot = state.projects.filter(p => !p.bot?.token);
+      const withoutBot = state.projects.filter(p => !p.bot?.token);
 
-      if (projsWithoutBot.length === 1) {
-        // Auto-attach
-        return attachBotToProject(token, chatId, projsWithoutBot[0], value, botInfo, sn);
-      }
-
-      if (projsWithoutBot.length === 0) {
-        // All projects have bots — ask if they want to create a new project
+      if (withoutBot.length === 1) return attachBotToProject(token, chatId, withoutBot[0], value, botInfo, sn);
+      if (withoutBot.length === 0) {
         return send(token, chatId,
-          `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\n`+
-          `All your projects already have bots. Send a project name to create a new one, then I\u2019ll attach this bot.`
+          `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nAll projects already have bots. Send a project name to create a new one.`
         );
       }
-
-      // Multiple projects without bots — show picker
-      const buttons = projsWithoutBot.slice(0, 8).map(p => ({
-        text: `\u2295 ${p.description || p.name}`, callback_data: `attach_bot:${p.name}:${value}`,
-      }));
+      const buttons = withoutBot.slice(0, 8).map(p => ({ text: `\u2295 ${p.description || p.name}`, callback_data: `attach:${p.name}` }));
       return send(token, chatId,
         `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nWhich project should I attach it to?`,
         { reply_markup: kbd(buttons) }
       );
     }
 
-    // ── SAP pass — open server dashboard
+    // ── SAP pass
     case 'pass_sap': {
       const url = waUrl(value);
-      return send(token, chatId,
-        `\u2609 Server dashboard`,
-        { reply_markup: kbd([[{ text: '\u2609 Open dashboard', web_app: { url } }]]) }
-      );
+      return send(token, chatId, `\u2609 Server dashboard`,
+        { reply_markup: kbd([[{ text: '\u2609 Open dashboard', web_app: { url } }]]) });
     }
 
-    // ── PAP pass — open project dashboard
+    // ── PAP pass
     case 'pass_pap': {
-      // Normalise pap_ -> pass_ format for webapp
       let passToken = value;
       if (value.startsWith('pap_')) {
-        const hex = value.replace(/^pap_/, '');
-        passToken  = `pass_${sn}_project_${hex}`;
+        passToken = `pass_${sn}_project_${value.replace(/^pap_/, '')}`;
       }
-      const url = waUrl(passToken);
-      return send(token, chatId,
-        `\u2699 Project dashboard`,
-        { reply_markup: kbd([[{ text: '\u2699 Open dashboard', web_app: { url } }]]) }
-      );
+      return send(token, chatId, `\u2699 Project dashboard`,
+        { reply_markup: kbd([[{ text: '\u2699 Open dashboard', web_app: { url: waUrl(passToken) } }]]) });
     }
 
-    // ── API keys — save to server config
+    // ── API keys
     case 'openrouter_key':
     case 'openai_key':
     case 'anthropic_key': {
-      const labels = {
-        openrouter_key: 'OpenRouter',
-        openai_key:     'OpenAI',
-        anthropic_key:  'Anthropic',
-      };
-      const label  = labels[type];
-      const envKey = {
-        openrouter_key: 'OPENROUTER_API_KEY',
-        openai_key:     'OPENAI_API_KEY',
-        anthropic_key:  'ANTHROPIC_API_KEY',
-      }[type];
-
-      // Save to /etc/hub/{envKey}
+      const labels  = { openrouter_key: 'OpenRouter', openai_key: 'OpenAI', anthropic_key: 'Anthropic' };
+      const envKeys = { openrouter_key: 'OPENROUTER_API_KEY', openai_key: 'OPENAI_API_KEY', anthropic_key: 'ANTHROPIC_API_KEY' };
+      const label   = labels[type];
+      const envKey  = envKeys[type];
       try {
         fs.writeFileSync(`/etc/hub/${envKey}`, value + '\n', { mode: 0o600 });
         return send(token, chatId,
-          `\u2705 <b>${label} key saved.</b>\n\n`+
-          `Stored at <code>/etc/hub/${envKey}</code>.\n`+
-          `Projects can now use <code>process.env.${envKey}</code>.`
-        );
-      } catch (e) {
-        return send(token, chatId, `\u274c Failed to save key: ${e.message}`);
-      }
+          `\u2705 <b>${label} key saved.</b>\n\nStored at <code>/etc/hub/${envKey}</code>.`);
+      } catch (e) { return send(token, chatId, `\u274c Failed to save: ${e.message}`); }
     }
 
-    // ── URL — ask what to do with it
+    // ── URL — set as webhook
     case 'url': {
-      const state  = _ctx.modules.drafts?.getState() || { projects: [] };
+      const state   = _ctx.modules.drafts?.getState() || { projects: [] };
       const withBot = state.projects.filter(p => p.bot?.token);
-
       if (!withBot.length) {
         return send(token, chatId,
-          `\u2705 Got a URL: <code>${value}</code>\n\n`+
-          `No bots connected yet. Create a project first with /new, then I can set this as a webhook.`
-        );
+          `\u2705 Got a URL: <code>${value}</code>\n\nNo bots connected yet. Create a project first.`);
       }
-
-      if (withBot.length === 1) {
-        // Auto-set webhook for the only bot project
-        return setWebhookForProject(token, chatId, withBot[0], value);
-      }
-
-      // Multiple bot projects — ask which one
-      const buttons = withBot.slice(0, 8).map(p => ({
-        text: `\u2295 @${p.bot.bot_username}`, callback_data: `set_webhook:${p.name}:${value}`,
-      }));
+      if (withBot.length === 1) return setWebhookForProject(token, chatId, withBot[0], value);
+      const buttons = withBot.slice(0, 8).map(p => ({ text: `\u2295 @${p.bot.bot_username}`, callback_data: `webhook:${p.name}` }));
       return send(token, chatId,
-        `\u2705 Got a URL: <code>${value}</code>\n\nSet as webhook for which bot?`,
-        { reply_markup: kbd(buttons) }
-      );
+        `\u2705 URL: <code>${value}</code>\n\nSet as webhook for which bot?`,
+        { reply_markup: kbd(buttons) });
     }
 
-    // ── Project name — create project
-    case 'project_name': {
-      return createProject(token, chatId, value, sn, sap);
-    }
+    // ── Project name — create
+    case 'project_name': return createProject(token, chatId, value, sn, sap);
 
-    // ── Unknown — ask
+    // ── Unknown — could be a free-form prompt — try LLM plan
     default: {
+      // If it looks like a sentence (has spaces), treat as a wizard prompt
+      if (value.includes(' ') && value.length > 8) {
+        return handlePromptPlan(token, chatId, value, sn, sap);
+      }
       return send(token, chatId,
-        `Hmm, I\'m not sure what this is.\n\n`+
-        `I can handle:\n`+
-        `\u00b7 Telegram bot token\n`+
-        `\u00b7 Project name (letters, numbers, hyphens)\n`+
-        `\u00b7 API key (OpenRouter, OpenAI, Anthropic)\n`+
-        `\u00b7 Webhook URL\n`+
-        `\u00b7 Hub pass link\n\n`+
-        `What is <code>${value.slice(0, 40)}</code>?`
+        `Not sure what <code>${value.slice(0,40)}</code> is.\n\n`+
+        `I understand:\n`+
+        `\u00b7 Bot token\n\u00b7 Project name (slug)\n\u00b7 API key\n\u00b7 Webhook URL\n\u00b7 Pass link\n\u00b7 Description of what to build\n\n`+
+        `Or open the Wizard:`,
+        { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }]]) }
       );
     }
   }
 }
 
-// ── Helpers for intake actions ─────────────────────────────────────────────
+// handlePromptPlan — user described what they want in plain text
+async function handlePromptPlan(token, chatId, prompt, sn, sap) {
+  await send(token, chatId, `\u23f3 Generating project plan…`);
+  try {
+    const r    = await fetch('http://localhost:3100/hub/api/wizard/generate', {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${sap}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ prompt }),
+    });
+    const data = await r.json();
+    if (!data.ok || !data.plan) throw new Error(data.error || 'no plan');
+
+    const plan  = data.plan;
+    const needs = plan.needs || [];
+    const needLabels = {
+      bot_token:      '\u2295 Bot token (from @BotFather)',
+      openrouter_key: '\u2295 OpenRouter API key',
+      openai_key:     '\u2295 OpenAI API key',
+      anthropic_key:  '\u2295 Anthropic API key',
+      webhook_url:    '\u2295 Webhook URL',
+    };
+    const needsList = needs.map(n => needLabels[n] || '\u2295 ' + n).join('\n');
+
+    const text =
+      `\u2728 <b>Project plan</b>\n\n`+
+      `<b>${plan.name}</b> \u2014 ${plan.description}\n`+
+      `Type: ${plan.type} \u00b7 Stack: ${plan.stack}\n\n`+
+      (plan.description_long ? `${plan.description_long}\n\n` : '')+
+      (needsList ? `<b>You\'ll need:</b>\n${needsList}\n\n` : '')+
+      `Create this project?`;
+
+    const papSecret  = (sap || '').slice(0, 12); // not real PAP, just for URL shape
+    const wizardUrl  = `${_ctx.config.publicBase}/hub/webapp?mode=wizard`;
+
+    return send(token, chatId, text, { reply_markup: kbd([
+        [{ text: `\u2713 Create ${plan.name}`, callback_data: `create_plan:${plan.name}:${encodeURIComponent(plan.description)}` }],
+        [{ text: '\u2728 Open Wizard instead', web_app: { url: wizardUrl } }],
+    ]) });
+  } catch (e) {
+    return send(token, chatId,
+      `Couldn\'t generate a plan: ${e.message}\n\nTry the Wizard instead:`,
+      { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }]]) }
+    );
+  }
+}
+
+// ── Intake actions ───────────────────────────────────────────────────────────
 
 async function createProject(token, chatId, name, sn, sap) {
   try {
     const res  = await fetch('http://localhost:3100/drafts/projects', {
-      method:  'POST',
+      method: 'POST',
       headers: { Authorization: `Bearer ${sap}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name }),
+      body:   JSON.stringify({ name }),
     });
     const data = await res.json();
     if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error}`);
@@ -391,78 +381,58 @@ async function createProject(token, chatId, name, sn, sap) {
     const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
     const buttons   = [[
       { text: '\u25b6 Open', url: data.live_url },
-      dashPass
-        ? { text: '\u2699 Dashboard', web_app: { url: waUrl(dashPass) } }
-        : { text: '\u2699 Dashboard', url: data.pap_activation_url },
+      dashPass ? { text: '\u2699 Dashboard', web_app: { url: waUrl(dashPass) } } : { text: '\u2699 Dashboard', url: data.pap_activation_url },
     ]];
     return send(token, chatId,
       `\u2705 <b>${name}</b> created.\n\n<a href="${data.live_url}">${data.live_url}</a>`,
-      { reply_markup: kbd(buttons) }
-    );
-  } catch (e) {
-    return send(token, chatId, `\u274c Error: ${e.message}`);
-  }
+      { reply_markup: kbd(buttons) });
+  } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
 async function attachBotToProject(token, chatId, project, botToken, botInfo, sn) {
   try {
     const papToken = project.pap?.token;
     if (!papToken) return send(token, chatId, `\u274c Project ${project.name} has no PAP token.`);
-    const r = await fetch('http://localhost:3100/drafts/project/bot', {
-      method:  'PUT',
+    const r    = await fetch('http://localhost:3100/drafts/project/bot', {
+      method: 'PUT',
       headers: { Authorization: `Bearer ${papToken}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token: botToken }),
+      body:   JSON.stringify({ token: botToken }),
     });
     const data = await r.json();
-    if (!data.ok) return send(token, chatId, `\u274c Failed to link bot: ${data.error || data.detail}`);
+    if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error || data.detail}`);
     const papSecret = papToken.replace(/^pap_/, '');
-    const dashPass  = `pass_${sn}_project_${papSecret}`;
     return send(token, chatId,
       `\u2705 <b>@${botInfo.username}</b> linked to <b>${project.description || project.name}</b>.`,
-      { reply_markup: kbd([[
-          { text: '\u2699 Open dashboard', web_app: { url: waUrl(dashPass) } },
-      ]]) }
+      { reply_markup: kbd([[{ text: '\u2699 Dashboard', web_app: { url: waUrl(`pass_${sn}_project_${papSecret}`) } }]]) }
     );
-  } catch (e) {
-    return send(token, chatId, `\u274c Error: ${e.message}`);
-  }
+  } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
 async function setWebhookForProject(token, chatId, project, url) {
   try {
     const papToken = project.pap?.token;
     if (!papToken) return send(token, chatId, `\u274c No PAP token for ${project.name}.`);
-    const r = await fetch('http://localhost:3100/drafts/project/bot/webhook', {
-      method:  'PUT',
+    const r    = await fetch('http://localhost:3100/drafts/project/bot/webhook', {
+      method: 'PUT',
       headers: { Authorization: `Bearer ${papToken}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ url }),
+      body:   JSON.stringify({ url }),
     });
     const data = await r.json();
     if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error || data.detail}`);
-    return send(token, chatId,
-      `\u2705 Webhook set for <b>@${project.bot.bot_username}</b>.\n\n<code>${url}</code>`
-    );
-  } catch (e) {
-    return send(token, chatId, `\u274c Error: ${e.message}`);
-  }
+    return send(token, chatId, `\u2705 Webhook set for <b>@${project.bot.bot_username}</b>.\n\n<code>${url}</code>`);
+  } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
-// ── Other handlers ────────────────────────────────────────────────────────────
+// ── Other handlers ───────────────────────────────────────────────────────────
 
 async function handleMy(token, chatId, owner) {
   const state = _ctx.modules.drafts?.getState() || { projects: [] };
   const base  = _ctx.config.publicBase;
   const sn    = _ctx.config.serverNumber;
   const sap   = readSAP();
-
-  if (!state.projects.length) {
-    return send(token, chatId, 'No projects yet. /new to create one.');
-  }
-
+  if (!state.projects.length) return send(token, chatId, 'No projects yet. /new to create one.');
   const buttons = [];
-  if (owner && sap) {
-    buttons.push({ text: '\u2609 Hub Server', web_app: { url: waUrl(`pass_${sn}_server_${sap}`) } });
-  }
+  if (owner && sap) buttons.push({ text: '\u2609 Hub Server', web_app: { url: waUrl(`pass_${sn}_server_${sap}`) } });
   for (const p of state.projects) {
     const papSecret = p.pap?.token?.replace(/^pap_/, '');
     const liveUrl   = `${base}/${p.name}/`;
@@ -472,13 +442,11 @@ async function handleMy(token, chatId, owner) {
     if (papSecret) row.push({ text: '\u2699 dashboard', web_app: { url: waUrl(`pass_${sn}_project_${papSecret}`) } });
     buttons.push(row);
   }
-
   const count = state.projects.length;
   const bots  = state.projects.filter(p => p.bot?.token).length;
   return send(token, chatId,
-    `<b>${count} project${count !== 1 ? 's' : ''}</b> \u00b7 ${bots} bot${bots !== 1 ? 's' : ''} active`,
-    { reply_markup: kbd(buttons) }
-  );
+    `<b>${count} project${count!==1?'s':''}</b> \u00b7 ${bots} bot${bots!==1?'s':''} active`,
+    { reply_markup: kbd(buttons) });
 }
 
 async function handleHub(token, chatId, owner) {
@@ -490,12 +458,10 @@ async function handleHub(token, chatId, owner) {
     const base  = _ctx.config.publicBase;
     const sn    = _ctx.config.serverNumber;
     const sap   = readSAP();
-
-    const text =
+    const text  =
       `<b>Hub ${h.version}</b> \u2014 ${h.ok ? 'online' : 'degraded'}\n`+
       `Projects: ${state.projects.length} \u00b7 Bots: ${bots}\n`+
-      `Uptime: ${Math.floor(h.uptime_sec / 60)}m \u00b7 ${base}`;
-
+      `Uptime: ${Math.floor(h.uptime_sec/60)}m \u00b7 ${base}`;
     const buttons = [];
     if (owner && sap) {
       buttons.push({ text: '\u2609 Server dashboard', web_app: { url: waUrl(`pass_${sn}_server_${sap}`) } });
@@ -511,9 +477,7 @@ async function handleHub(token, chatId, owner) {
       buttons.push({ text: 'hub.labs.co', url: base });
     }
     return send(token, chatId, text, { reply_markup: kbd(buttons) });
-  } catch (e) {
-    return send(token, chatId, `Error: ${e.message}`);
-  }
+  } catch (e) { return send(token, chatId, `Error: ${e.message}`); }
 }
 
 async function handleHelp(token, chatId, owner) {
@@ -537,8 +501,7 @@ async function handleSignin(token, chatId) {
     { reply_markup: kbd([
         [{ text: '\u2609 Open in Telegram', web_app: { url: waUrl(passToken) } }],
         [{ text: '\u2609 Open in browser',  url: `${base}/signin/${passToken}` }],
-    ]) }
-  );
+    ]) });
 }
 
 // ── Module contract ────────────────────────────────────────────────────────────
