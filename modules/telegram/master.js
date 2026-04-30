@@ -1,4 +1,17 @@
-// modules/telegram/master.js — @LabsHubBot master coordinator
+// modules/telegram/master.js — @LabsHubBot
+//
+// Command menu (in order as shown to user):
+//   /new      — create a project
+//   /my       — my projects + dashboards (owner: SAP + all PAPs)
+//   /hub      — hub status (owner: + inline management)
+//   /help     — help
+//   /start    — last (used once)
+//
+// Additional owner-only:
+//   /signin   — server root link
+//   /id       — chat id
+//   /claim    — claim ownership
+
 import fs from 'fs';
 import path from 'path';
 
@@ -9,14 +22,11 @@ let _offset      = 0;
 let _ownerChatId = null;
 
 export const hooks = {
-  onDraftsBoot:      () => {},
-  onVersionBump:     () => {},
-  onSchemaMigration: () => {},
-  onNewProject:      () => {},
-  onMainCommit:      () => {},
-  onAAPMerged:       () => {},
-  onNewAAPCreated:   () => {},
+  onDraftsBoot: () => {}, onVersionBump: () => {}, onSchemaMigration: () => {},
+  onNewProject: () => {}, onMainCommit:  () => {}, onAAPMerged: () => {}, onNewAAPCreated: () => {},
 };
+
+// ——— token + owner ———
 
 function tokenPath() { return _ctx.paths.masterBotToken(); }
 function ownerPath() { return path.join(_ctx.config.configDir, 'owner.id'); }
@@ -41,10 +51,7 @@ function loadToken() {
 function loadOwner() {
   try {
     const p = ownerPath();
-    if (fs.existsSync(p)) {
-      const raw = fs.readFileSync(p, 'utf8').trim();
-      if (raw) return String(raw);
-    }
+    if (fs.existsSync(p)) { const r = fs.readFileSync(p,'utf8').trim(); if (r) return String(r); }
   } catch {}
   return null;
 }
@@ -53,54 +60,59 @@ function saveOwner(chatId) {
   _ownerChatId = String(chatId);
   try {
     fs.mkdirSync(path.dirname(ownerPath()), { recursive: true });
-    fs.writeFileSync(ownerPath(), _ownerChatId + '\n', { mode: 0o600 });
+    fs.writeFileSync(ownerPath(), _ownerChatId+'\n', { mode: 0o600 });
     _ctx.logger.info('[master-bot] owner set to', _ownerChatId);
-  } catch (e) {
-    _ctx.logger.error('[master-bot] failed to save owner:', e.message);
-  }
+  } catch (e) { _ctx.logger.error('[master-bot] failed to save owner:', e.message); }
 }
 
-function isOwner(chatId) {
-  return !!_ownerChatId && String(chatId) === _ownerChatId;
+function isOwner(chatId) { return !!_ownerChatId && String(chatId) === _ownerChatId; }
+
+function readSAP() {
+  try { return fs.readFileSync('/etc/hub/sap.token','utf8').trim(); } catch { return ''; }
 }
 
-function require_sap() {
-  try { return fs.readFileSync('/etc/hub/sap.token', 'utf8').trim(); } catch { return ''; }
-}
+// ——— Telegram API ———
 
 async function tg(token, method, params = {}) {
-  const res = await fetch('https://api.telegram.org/bot' + token + '/' + method, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+  const res = await fetch('https://api.telegram.org/bot'+token+'/'+method, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(params),
   });
   return res.json();
 }
 
 async function send(token, chatId, text, extra = {}) {
   return tg(token, 'sendMessage', {
-    chat_id: chatId,
-    text,
-    parse_mode: 'HTML',
-    disable_web_page_preview: true,
-    ...extra,
+    chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra,
   });
 }
 
-async function setCommands(token) {
-  await tg(token, 'setMyCommands', {
-    commands: [
-      { command: 'start',      description: 'Status overview' },
-      { command: 'dashboards', description: 'Dashboard links for all projects' },
-      { command: 'projects',   description: 'List all projects' },
-      { command: 'new',        description: 'Create project: /new name' },
-      { command: 'signin',     description: 'Get server root link' },
-      { command: 'status',     description: 'Server health' },
-      { command: 'help',       description: 'Command list' },
-    ],
-    scope: { type: 'all_private_chats' },
-  });
+async function setCommands(token, ownerChatId) {
+  // For everyone: /new /my /hub /help /start
+  const common = [
+    { command: 'new',   description: 'Create a project' },
+    { command: 'my',    description: 'My projects and dashboards' },
+    { command: 'hub',   description: 'Hub status' },
+    { command: 'help',  description: 'Help' },
+    { command: 'start', description: 'Start' },
+  ];
+  // Default scope — all users
+  await tg(token, 'setMyCommands', { commands: common, scope: { type: 'all_private_chats' } }).catch(() => {});
+
+  // Owner scope — extra commands appended
+  if (ownerChatId) {
+    const ownerExtras = [
+      ...common,
+      { command: 'signin', description: 'Server root signin link' },
+      { command: 'id',     description: 'Your Telegram chat ID' },
+    ];
+    await tg(token, 'setMyCommands', {
+      commands: ownerExtras,
+      scope: { type: 'chat', chat_id: Number(ownerChatId) },
+    }).catch(() => {});
+  }
 }
+
+// ——— polling ———
 
 async function startPolling(token) {
   _polling = true;
@@ -108,13 +120,12 @@ async function startPolling(token) {
   while (_polling) {
     try {
       const r = await tg(token, 'getUpdates', {
-        offset: _offset, timeout: 25,
-        allowed_updates: ['message', 'callback_query'],
+        offset: _offset, timeout: 25, allowed_updates: ['message','callback_query'],
       });
       if (r.ok && r.result?.length) {
         for (const upd of r.result) {
           _offset = upd.update_id + 1;
-          try { await dispatch(token, upd); } catch (e) { log.error('dispatch error:', e.message); }
+          try { await dispatch(token, upd); } catch (e) { log.error('dispatch:', e.message); }
         }
       }
     } catch (e) {
@@ -124,220 +135,196 @@ async function startPolling(token) {
   }
 }
 
+// ——— dispatch ———
+
 async function dispatch(token, upd) {
   const msg = upd.message;
   if (!msg?.text) return;
   const chatId = msg.chat.id;
-  const text   = msg.text.trim();
-  const parts  = text.split(/\s+/);
+  const parts  = msg.text.trim().split(/\s+/);
   const cmd    = parts[0].replace(/@.*$/, '').toLowerCase();
   const args   = parts.slice(1).join(' ');
 
-  if (cmd === '/id') {
-    return send(token, chatId, `Your chat ID: <code>${chatId}</code>`);
-  }
-
+  // Always available
+  if (cmd === '/id')    return send(token, chatId, `Your chat ID: <code>${chatId}</code>`);
   if (cmd === '/claim') {
-    const sap = require_sap();
+    const sap = readSAP();
     if (!sap) return send(token, chatId, 'SAP not configured.');
-    if (args.trim() === sap) {
-      saveOwner(chatId);
-      return send(token, chatId, '✓ You are now the owner of this Hub server.');
-    }
+    if (args.trim() === sap) { saveOwner(chatId); return send(token, chatId, '\u2713 You are now the owner of this Hub server.'); }
     return send(token, chatId, 'Wrong token.');
   }
 
-  if (!_ownerChatId && cmd === '/start') {
-    saveOwner(chatId);
-    return handleOwnerStart(token, chatId);
-  }
+  // First /start claims ownership
+  if (!_ownerChatId && cmd === '/start') { saveOwner(chatId); return handleStart(token, chatId, true); }
 
-  if (isOwner(chatId)) {
-    switch (cmd) {
-      case '/start':      return handleOwnerStart(token, chatId);
-      case '/dashboards': return handleDashboards(token, chatId);
-      case '/projects':   return handleProjects(token, chatId);
-      case '/new':        return handleNew(token, chatId, args);
-      case '/signin':     return handleSignin(token, chatId);
-      case '/status':     return handleStatus(token, chatId);
-      case '/help':       return handleOwnerHelp(token, chatId);
-      default:            return send(token, chatId, `Unknown command. Send /help for the list.`);
-    }
-  }
+  const owner = isOwner(chatId);
 
-  return handlePublic(token, chatId);
+  switch (cmd) {
+    case '/new':    return handleNew(token, chatId, args);
+    case '/my':     return handleMy(token, chatId, owner);
+    case '/hub':    return handleHub(token, chatId, owner);
+    case '/help':   return handleHelp(token, chatId, owner);
+    case '/start':  return handleStart(token, chatId, owner);
+    case '/signin': return owner ? handleSignin(token, chatId) : handlePublicFallback(token, chatId);
+    default:        return send(token, chatId, 'Unknown command. Send /help for the list.');
+  }
 }
 
-async function handleOwnerStart(token, chatId) {
-  const state    = _ctx.modules.drafts?.getState() || { projects: [] };
-  const count    = state.projects.length;
-  const botCount = state.projects.filter(p => p.bot?.token).length;
-  const base     = _ctx.config.publicBase;
-  const sap      = require_sap();
-  const signinUrl = `${base}/signin/pass_0_server_${sap}`;
+// ——— handlers ———
 
-  return send(token, chatId,
-    `<b>Hub</b> — running.\n\n` +
-    `<b>${count}</b> project${count !== 1 ? 's' : ''}  ·  <b>${botCount}</b> bot${botCount !== 1 ? 's' : ''} active\n` +
-    `Server: <code>${base}</code>\n\n` +
-    `<a href="${signinUrl}">Open server dashboard</a>\n\n` +
-    `/dashboards — all project dashboards\n` +
-    `/projects — list everything\n` +
-    `/new name — create project\n` +
-    `/status — health check`
-  );
-}
-
-async function handleDashboards(token, chatId) {
+async function handleStart(token, chatId, owner) {
+  const base = _ctx.config.publicBase;
+  if (!owner) {
+    return send(token, chatId,
+      `<b>Hub</b> \u2014 connect everything. Manage from chat.\n\n`+
+      `Hub lets you run bots, sites, apps and APIs \u2014 all from one place.\n\n`+
+      `<a href="${base}">${base}</a>\n\n`+
+      `/new \u2014 create a project\n/hub \u2014 hub status\n/help \u2014 help`
+    );
+  }
   const state = _ctx.modules.drafts?.getState() || { projects: [] };
-  const base  = _ctx.config.publicBase;
-  const sn    = _ctx.config.serverNumber;
-  const sap   = require_sap();
-
-  // Server root
-  const serverUrl = `${base}/signin/pass_${sn}_server_${sap}`;
-
-  // Filter: only named projects (skip routestest and other test projects)
-  const SHOW = ['supermailbot', 'vasilisa21robot'];
-  const projects = state.projects.filter(p => SHOW.includes(p.name));
-
-  const lines = [
-    `• <b>Hub Server</b>\n<a href="${serverUrl}">${serverUrl}</a>`,
-  ];
-
-  for (const p of projects) {
-    const papSecret = p.pap?.token?.replace(/^pap_/, '');
-    const url = papSecret ? `${base}/signin/pass_${sn}_project_${papSecret}` : null;
-    const botTag = p.bot?.bot_username ? ` @${p.bot.bot_username}` : '';
-    const label = p.description || p.name;
-    if (url) lines.push(`• <b>${label}</b>${botTag}\n<a href="${url}">${url}</a>`);
-  }
-
+  const count = state.projects.length;
+  const bots  = state.projects.filter(p => p.bot?.token).length;
   return send(token, chatId,
-    `<b>Dashboards</b>\n\n` + lines.join('\n\n')
-  );
-}
-
-async function handleProjects(token, chatId) {
-  const state = _ctx.modules.drafts?.getState() || { projects: [] };
-  const base  = _ctx.config.publicBase;
-  const sn    = _ctx.config.serverNumber;
-
-  if (!state.projects.length) {
-    return send(token, chatId, 'No projects yet. Send /new name to create one.');
-  }
-
-  const lines = state.projects.map(p => {
-    const papSecret = p.pap?.token?.replace(/^pap_/, '');
-    const signinUrl = papSecret ? `${base}/signin/pass_${sn}_project_${papSecret}` : null;
-    const liveUrl   = `${base}/${p.name}/`;
-    const botTag    = p.bot?.token ? ` · @${p.bot.bot_username}` : '';
-    const link      = signinUrl ? `<a href="${signinUrl}">${p.name}</a>` : `<b>${p.name}</b>`;
-    return `${link}${botTag}\n<a href="${liveUrl}">${liveUrl}</a>`;
-  });
-
-  return send(token, chatId,
-    `<b>${state.projects.length} project${state.projects.length !== 1 ? 's' : ''}</b>\n\n` +
-    lines.join('\n\n')
+    `<b>Hub</b> \u2014 running.\n\n`+
+    `<b>${count}</b> project${count!==1?'s':''} \u00b7 <b>${bots}</b> bot${bots!==1?'s':''} active\n`+
+    `Server: <code>${base}</code>\n\n`+
+    `/new \u2014 create project\n/my \u2014 projects + dashboards\n/hub \u2014 hub status`
   );
 }
 
 async function handleNew(token, chatId, args) {
-  const name = args.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
-  if (!name) {
-    return send(token, chatId, 'Usage: /new projectname\n\nName: lowercase letters, numbers, hyphens, underscores.');
-  }
+  const name = args.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
+  if (!name) return send(token, chatId, 'Usage: /new projectname\n\nName: lowercase letters, numbers, hyphens, underscores.');
   try {
-    const sap = require_sap();
+    const sap = readSAP();
     const res = await fetch('http://localhost:3100/drafts/projects', {
-      method:  'POST',
-      headers: { 'Authorization': `Bearer ${sap}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name }),
+      method: 'POST',
+      headers: {'Authorization':'Bearer '+sap,'Content-Type':'application/json'},
+      body: JSON.stringify({ name }),
     });
     const data = await res.json();
     if (data.ok) {
       return send(token, chatId,
-        `<b>${name}</b> created.\n\n` +
-        `Live: <a href="${data.live_url}">${data.live_url}</a>\n` +
+        `<b>${name}</b> created.\n\n`+
+        `Live: <a href="${data.live_url}">${data.live_url}</a>\n`+
         `Dashboard: <a href="${data.pap_activation_url}">open</a>`
       );
     }
     return send(token, chatId, `Failed: ${data.error}`);
-  } catch (e) {
-    return send(token, chatId, `Error: ${e.message}`);
+  } catch (e) { return send(token, chatId, `Error: ${e.message}`); }
+}
+
+async function handleMy(token, chatId, owner) {
+  const state = _ctx.modules.drafts?.getState() || { projects: [] };
+  const base  = _ctx.config.publicBase;
+  const sn    = _ctx.config.serverNumber;
+  const sap   = readSAP();
+
+  if (!state.projects.length) {
+    return send(token, chatId, owner
+      ? 'No projects yet. Use /new name to create one.'
+      : 'No projects on this server yet.');
   }
+
+  let lines = [];
+
+  // Owner: server dashboard first
+  if (owner && sap) {
+    lines.push(`<b>Server</b>\n<a href="${base}/signin/pass_${sn}_server_${sap}">${base}/signin/pass_${sn}_server_${sap}</a>`);
+    lines.push('');
+  }
+
+  for (const p of state.projects) {
+    const papSecret = p.pap?.token?.replace(/^pap_/,'');
+    const signinUrl = papSecret ? `${base}/signin/pass_${sn}_project_${papSecret}` : null;
+    const liveUrl   = `${base}/${p.name}/`;
+    const botTag    = p.bot?.token ? ` \u00b7 @${p.bot.bot_username}` : '';
+    const label     = `<b>${p.description||p.name}</b>${botTag}`;
+    lines.push(`${label}\n`+
+      `<a href="${liveUrl}">${liveUrl}</a>`+
+      (signinUrl&&owner ? ` \u00b7 <a href="${signinUrl}">dashboard</a>` : ''));
+  }
+
+  return send(token, chatId, lines.join('\n\n'));
 }
 
-async function handleSignin(token, chatId) {
-  const sap  = require_sap();
-  const base = _ctx.config.publicBase;
-  const url  = `${base}/signin/pass_0_server_${sap}`;
-  return send(token, chatId,
-    `Server dashboard:\n<a href="${url}">${url}</a>\n\n<i>Full server access. Don't share.</i>`
-  );
-}
-
-async function handleStatus(token, chatId) {
+async function handleHub(token, chatId, owner) {
   try {
     const r     = await fetch('http://localhost:3100/health');
     const h     = await r.json();
     const state = _ctx.modules.drafts?.getState() || { projects: [] };
     const bots  = state.projects.filter(p => p.bot?.token).length;
-    const upMin = Math.floor(h.uptime_sec / 60);
-    return send(token, chatId,
-      `<b>Hub ${h.version}</b> — ${h.ok ? 'online' : 'degraded'}\n\n` +
-      `Modules: ${h.modules.join(', ')}\n` +
-      `Projects: ${state.projects.length}  ·  Bots: ${bots}\n` +
-      `Uptime: ${upMin}m\n` +
-      `Server: ${_ctx.config.publicBase}`
-    );
-  } catch (e) {
-    return send(token, chatId, `Health check failed: ${e.message}`);
+    const upMin = Math.floor(h.uptime_sec/60);
+    const base  = _ctx.config.publicBase;
+
+    let text = `<b>Hub ${h.version}</b> \u2014 ${h.ok?'online':'degraded'}\n\n`+
+      `Modules: ${h.modules.join(', ')}\n`+
+      `Projects: ${state.projects.length} \u00b7 Bots: ${bots}\n`+
+      `Uptime: ${upMin}m\n`+
+      `Server: ${base}`;
+
+    // Owner sees extra controls
+    if (owner) {
+      const sap = readSAP();
+      text += `\n\n<b>Admin controls</b>\n`+
+        `/new name \u2014 create project\n`+
+        `/signin \u2014 server dashboard link\n`+
+        `/my \u2014 all projects + dashboards`;
+    }
+
+    return send(token, chatId, text);
+  } catch (e) { return send(token, chatId, `Health check failed: ${e.message}`); }
+}
+
+async function handleHelp(token, chatId, owner) {
+  let text = `<b>Hub commands</b>\n\n`+
+    `/new name \u2014 create a project\n`+
+    `/my \u2014 my projects and dashboards\n`+
+    `/hub \u2014 hub status\n`+
+    `/help \u2014 this list\n`+
+    `/start \u2014 start`;
+
+  if (owner) {
+    text += `\n\n<b>Owner only</b>\n`+
+      `/signin \u2014 server root signin link\n`+
+      `/id \u2014 your Telegram chat ID`;
   }
+
+  return send(token, chatId, text);
 }
 
-async function handleOwnerHelp(token, chatId) {
-  return send(token, chatId,
-    `<b>Hub commands</b>\n\n` +
-    `/start — status overview\n` +
-    `/dashboards — dashboard links for all projects\n` +
-    `/projects — list all projects\n` +
-    `/new name — create a new project\n` +
-    `/signin — server root link\n` +
-    `/status — server health\n` +
-    `/help — this list\n` +
-    `/id — your Telegram chat ID`
-  );
-}
-
-async function handlePublic(token, chatId) {
+async function handleSignin(token, chatId) {
+  const sap  = readSAP();
   const base = _ctx.config.publicBase;
+  const sn   = _ctx.config.serverNumber;
+  const url  = `${base}/signin/pass_${sn}_server_${sap}`;
   return send(token, chatId,
-    `<b>Hub</b> — connect everything. Manage from chat.\n\n` +
-    `Hub lets you run bots, sites, apps, and APIs — all from one place.\n\n` +
-    `<a href="${base}">${base}</a>`
+    `Server dashboard:\n<a href="${url}">${url}</a>\n\n<i>Full server access. Don't share.</i>`
   );
 }
+
+async function handlePublicFallback(token, chatId) {
+  return send(token, chatId, 'Unknown command. Send /help for the list.');
+}
+
+// ——— module contract ———
 
 export function getTelegramStatus() {
-  const token = loadToken();
-  return { installed: !!token, bot: _botInfo || null, polling: _polling };
+  return { installed: !!loadToken(), bot: _botInfo||null, polling: _polling };
 }
 
 export async function init(ctx) {
   _ctx = ctx;
   _ownerChatId = loadOwner();
-
   const token = loadToken();
   if (!token) { ctx.logger.info('[master-bot] no token found, skipping'); return; }
-
   const me = await tg(token, 'getMe');
   if (!me.ok) { ctx.logger.warn('[master-bot] getMe failed:', me.description); return; }
   _botInfo = me.result;
-  ctx.logger.info('[master-bot] connected as @' + _botInfo.username +
-    (_ownerChatId ? ` (owner: ${_ownerChatId})` : ' (no owner — send /claim <sap>)'));
-
-  await setCommands(token).catch(() => {});
+  ctx.logger.info('[master-bot] connected as @'+_botInfo.username+
+    (_ownerChatId ? ` (owner: ${_ownerChatId})` : ' (no owner — first /start claims)'));
+  await setCommands(token, _ownerChatId);
   startPolling(token).catch(e => ctx.logger.error('[master-bot] polling crashed:', e.message));
 }
 
