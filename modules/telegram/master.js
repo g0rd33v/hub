@@ -57,20 +57,15 @@ function readSAP()       { try { return fs.readFileSync('/etc/hub/sap.token','ut
 
 // —— helpers ——
 
-// Build a webapp URL: /hub/webapp?token=<pass_N_role_hex>
 function webappUrl(passToken) {
-  const base = _ctx.config.publicBase;
-  return `${base}/hub/webapp?token=${encodeURIComponent(passToken)}`;
+  return `${_ctx.config.publicBase}/hub/webapp?token=${encodeURIComponent(passToken)}`;
 }
 
-// Build inline keyboard rows.
-// Each item: { text, url } for normal link, or { text, web_app } for Mini App.
 function kbd(buttons) {
   const rows = buttons.map(b => Array.isArray(b) ? b : [b]);
   return { inline_keyboard: rows };
 }
 
-// Telegram API
 async function tg(token, method, params = {}) {
   const res = await fetch('https://api.telegram.org/bot'+token+'/'+method, {
     method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(params),
@@ -91,18 +86,18 @@ async function answerCallback(token, callbackId, text = '') {
 
 async function setCommands(token, ownerChatId) {
   const common = [
-    { command: 'new',   description: 'Create a project' },
-    { command: 'my',    description: 'My projects and dashboards' },
+    { command: 'start', description: 'Welcome to Hub' },
+    { command: 'new',   description: 'New project' },
+    { command: 'my',    description: 'My projects' },
     { command: 'hub',   description: 'Hub status' },
-    { command: 'help',  description: 'Help' },
-    { command: 'start', description: 'Start' },
+    { command: 'help',  description: 'All commands' },
   ];
   await tg(token, 'setMyCommands', { commands: common, scope: { type: 'all_private_chats' } }).catch(() => {});
   if (ownerChatId) {
     await tg(token, 'setMyCommands', {
       commands: [...common,
-        { command: 'signin', description: 'Server root signin link' },
-        { command: 'id',     description: 'Your Telegram chat ID' },
+        { command: 'signin', description: 'Server access' },
+        { command: 'id',     description: 'Your ID' },
       ],
       scope: { type: 'chat', chat_id: Number(ownerChatId) },
     }).catch(() => {});
@@ -147,11 +142,11 @@ async function dispatch(token, upd) {
   const cmd    = parts[0].replace(/@.*$/, '').toLowerCase();
   const args   = parts.slice(1).join(' ');
 
-  if (cmd === '/id')    return send(token, chatId, `Your chat ID: <code>${chatId}</code>`);
+  if (cmd === '/id')    return send(token, chatId, `Your ID: <code>${chatId}</code>`);
   if (cmd === '/claim') {
     const sap = readSAP();
     if (!sap) return send(token, chatId, 'SAP not configured.');
-    if (args.trim() === sap) { saveOwner(chatId); return send(token, chatId, '\u2713 You are now the owner of this Hub server.'); }
+    if (args.trim() === sap) { saveOwner(chatId); return send(token, chatId, '\u2713 You are now the server owner.'); }
     return send(token, chatId, 'Wrong token.');
   }
   if (!_ownerChatId && cmd === '/start') { saveOwner(chatId); return handleStart(token, chatId, true); }
@@ -163,8 +158,8 @@ async function dispatch(token, upd) {
     case '/hub':    return handleHub(token, chatId, owner);
     case '/help':   return handleHelp(token, chatId, owner);
     case '/start':  return handleStart(token, chatId, owner);
-    case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. Send /help for the list.');
-    default:        return send(token, chatId, 'Unknown command. Send /help for the list.');
+    case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. /help for the list.');
+    default:        return send(token, chatId, 'Unknown command. /help for the list.');
   }
 }
 
@@ -174,9 +169,8 @@ async function handleStart(token, chatId, owner) {
   const base = _ctx.config.publicBase;
   if (!owner) {
     return send(token, chatId,
-      `<b>Hub</b> \u2014 connect everything. Manage from chat.\n\n`+
-      `Hub lets you run bots, sites, apps and APIs \u2014 all from one place.\n\n`+
-      `/new \u2014 create a project\n/hub \u2014 hub status\n/help \u2014 help`,
+      `<b>Hub</b> \u2014 run bots, sites and APIs from one place.\n\n`+
+      `/new \u2014 create a project\n/hub \u2014 status\n/help \u2014 all commands`,
       { reply_markup: kbd([{ text: 'hub.labs.co', url: base }]) }
     );
   }
@@ -186,15 +180,14 @@ async function handleStart(token, chatId, owner) {
   return send(token, chatId,
     `<b>Hub</b> \u2014 running.\n\n`+
     `<b>${count}</b> project${count!==1?'s':''} \u00b7 <b>${bots}</b> bot${bots!==1?'s':''} active\n`+
-    `Server: <code>${base}</code>\n\n`+
-    `/my \u2014 projects + dashboards\n/hub \u2014 hub status`
+    `Server: <code>${base}</code>`
   );
 }
 
 async function handleNew(token, chatId, args) {
   const name = args.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
   if (!name) return send(token, chatId,
-    'Usage: /new projectname\n\nName: lowercase letters, numbers, hyphens, underscores.');
+    'Usage: /new projectname\n\nLowercase letters, numbers, hyphens, underscores.');
   try {
     const sap  = readSAP();
     const res  = await fetch('http://localhost:3100/drafts/projects', {
@@ -204,20 +197,18 @@ async function handleNew(token, chatId, args) {
     });
     const data = await res.json();
     if (data.ok) {
-      const sn  = _ctx.config.serverNumber;
-      const base = _ctx.config.publicBase;
-      // Extract PAP secret from pap_activation_url or pap_token
+      const sn        = _ctx.config.serverNumber;
       const papSecret = (data.pap_token || '').replace(/^pap_/, '');
       const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
       const dashUrl   = dashPass ? webappUrl(dashPass) : data.pap_activation_url;
-      const buttons = [
-        [{ text: '\u25b6 Open live', url: data.live_url },
-         dashPass
-           ? { text: '\u2699 Dashboard', web_app: { url: dashUrl } }
-           : { text: '\u2699 Dashboard', url: dashUrl }],
-      ];
+      const buttons = [[
+        { text: '\u25b6 Open', url: data.live_url },
+        dashPass
+          ? { text: '\u2699 Dashboard', web_app: { url: dashUrl } }
+          : { text: '\u2699 Dashboard', url: dashUrl },
+      ]];
       return send(token, chatId,
-        `<b>${name}</b> created.\n\nLive: <a href="${data.live_url}">${data.live_url}</a>`,
+        `<b>${name}</b> created.\n\n<a href="${data.live_url}">${data.live_url}</a>`,
         { reply_markup: kbd(buttons) }
       );
     }
@@ -232,28 +223,24 @@ async function handleMy(token, chatId, owner) {
   const sap   = readSAP();
 
   if (!state.projects.length) {
-    return send(token, chatId, owner ? 'No projects yet. Use /new name to create one.' : 'No projects on this server yet.');
+    return send(token, chatId, owner ? 'No projects yet. /new name to create one.' : 'No projects on this server.');
   }
 
   const buttons = [];
 
-  // Owner: server dashboard Mini App button first
   if (owner && sap) {
     const serverPass = `pass_${sn}_server_${sap}`;
     buttons.push({ text: '\u2609 Hub Server', web_app: { url: webappUrl(serverPass) } });
   }
 
-  // One row per project: [Live link] [Dashboard Mini App]
   for (const p of state.projects) {
     const papSecret = p.pap?.token?.replace(/^pap_/,'');
     const liveUrl   = `${base}/${p.name}/`;
     const label     = p.description || p.name;
     const botTag    = p.bot?.token ? ` \u00b7 @${p.bot.bot_username}` : '';
-
     const row = [{ text: `\u25b6 ${label}${botTag}`, url: liveUrl }];
     if (papSecret) {
-      const passToken = `pass_${sn}_project_${papSecret}`;
-      row.push({ text: '\u2699 dashboard', web_app: { url: webappUrl(passToken) } });
+      row.push({ text: '\u2699 dashboard', web_app: { url: webappUrl(`pass_${sn}_project_${papSecret}`) } });
     }
     buttons.push(row);
   }
@@ -272,30 +259,24 @@ async function handleHub(token, chatId, owner) {
     const h     = await r.json();
     const state = _ctx.modules.drafts?.getState() || { projects: [] };
     const bots  = state.projects.filter(p => p.bot?.token).length;
-    const upMin = Math.floor(h.uptime_sec/60);
     const base  = _ctx.config.publicBase;
     const sn    = _ctx.config.serverNumber;
     const sap   = readSAP();
 
-    const text = `<b>Hub ${h.version}</b> \u2014 ${h.ok?'online':'degraded'}\n\n`+
-      `Modules: ${h.modules.join(', ')}\n`+
+    const text =
+      `<b>Hub ${h.version}</b> \u2014 ${h.ok ? 'online' : 'degraded'}\n`+
       `Projects: ${state.projects.length} \u00b7 Bots: ${bots}\n`+
-      `Uptime: ${upMin}m\n`+
-      `Server: ${base}`;
+      `Uptime: ${Math.floor(h.uptime_sec/60)}m \u00b7 ${base}`;
 
     const buttons = [];
     if (owner && sap) {
-      // Server dashboard as Mini App
-      const serverPass = `pass_${sn}_server_${sap}`;
-      buttons.push({ text: '\u2609 Server dashboard', web_app: { url: webappUrl(serverPass) } });
-      // Each project dashboard as Mini App
+      buttons.push({ text: '\u2609 Server dashboard', web_app: { url: webappUrl(`pass_${sn}_server_${sap}`) } });
       for (const p of state.projects) {
         const papSecret = p.pap?.token?.replace(/^pap_/,'');
         if (papSecret) {
-          const label  = p.description || p.name;
+          const label = p.description || p.name;
           const botTag = p.bot?.token ? ` @${p.bot.bot_username}` : '';
-          const passToken = `pass_${sn}_project_${papSecret}`;
-          buttons.push({ text: `\u2699 ${label}${botTag}`, web_app: { url: webappUrl(passToken) } });
+          buttons.push({ text: `\u2699 ${label}${botTag}`, web_app: { url: webappUrl(`pass_${sn}_project_${papSecret}`) } });
         }
       }
     } else {
@@ -303,32 +284,30 @@ async function handleHub(token, chatId, owner) {
     }
 
     return send(token, chatId, text, { reply_markup: kbd(buttons) });
-  } catch (e) { return send(token, chatId, `Health check failed: ${e.message}`); }
+  } catch (e) { return send(token, chatId, `Error: ${e.message}`); }
 }
 
 async function handleHelp(token, chatId, owner) {
-  let text = `<b>Hub commands</b>\n\n`+
-    `/new name \u2014 create a project\n`+
-    `/my \u2014 my projects and dashboards\n`+
-    `/hub \u2014 hub status\n`+
-    `/help \u2014 this list\n`+
-    `/start \u2014 start`;
-  if (owner) text += `\n\n<b>Owner only</b>\n/signin \u2014 server root link\n/id \u2014 your chat ID`;
+  let text =
+    `/start \u2014 welcome\n`+
+    `/new name \u2014 create project\n`+
+    `/my \u2014 my projects\n`+
+    `/hub \u2014 server status\n`+
+    `/help \u2014 this list`;
+  if (owner) text += `\n\n<b>Owner</b>\n/signin \u2014 server access\n/id \u2014 your ID`;
   return send(token, chatId, text);
 }
 
 async function handleSignin(token, chatId) {
-  const sap  = readSAP();
-  const sn   = _ctx.config.serverNumber;
+  const sap       = readSAP();
+  const sn        = _ctx.config.serverNumber;
+  const base      = _ctx.config.publicBase;
   const passToken = `pass_${sn}_server_${sap}`;
-  // Send both: Mini App button (for Telegram) + plain URL (for browser)
-  const base = _ctx.config.publicBase;
-  const signinUrl = `${base}/signin/${passToken}`;
   return send(token, chatId,
-    `Server dashboard\n\n<i>Full server access. Don\u2019t share.</i>`,
+    `<b>Server access</b>\n\n<i>Do not share.</i>`,
     { reply_markup: kbd([
         [{ text: '\u2609 Open in Telegram', web_app: { url: webappUrl(passToken) } }],
-        [{ text: '\u2609 Open in browser',  url: signinUrl }],
+        [{ text: '\u2609 Open in browser',  url: `${base}/signin/${passToken}` }],
     ]) }
   );
 }
