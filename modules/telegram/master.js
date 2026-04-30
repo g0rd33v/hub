@@ -55,8 +55,14 @@ function saveOwner(chatId) {
 const isOwner  = chatId => !!_ownerChatId && String(chatId) === _ownerChatId;
 const readSAP  = () => { try { return fs.readFileSync('/etc/hub/sap.token', 'utf8').trim(); } catch { return ''; } };
 const waUrl    = pass  => `${_ctx.config.publicBase}/hub/webapp?token=${encodeURIComponent(pass)}`;
-const wizUrl   = ()    => `${_ctx.config.publicBase}/hub/webapp?mode=wizard`;
+const wizUrl   = tgId  => `${_ctx.config.publicBase}/hub/wizard?tg=${encodeURIComponent(tgId || '')}`;
 const kbd      = btns  => ({ inline_keyboard: btns.map(b => Array.isArray(b) ? b : [b]) });
+
+// Buffer helpers — delegate to modules/buffer
+const bufAdd   = (userId, text, kind)  => _ctx.modules.buffer?.bufferAdd?.(_ctx.config.dataDir, userId, text, kind);
+const bufList  = (userId, n)           => _ctx.modules.buffer?.bufferList?.(_ctx.config.dataDir, userId, n) || [];
+const bufCount = (userId)              => _ctx.modules.buffer?.bufferCount?.(_ctx.config.dataDir, userId) || 0;
+const bufClear = (userId)              => _ctx.modules.buffer?.bufferClear?.(_ctx.config.dataDir, userId);
 
 async function tg(token, method, params = {}) {
   const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
@@ -74,11 +80,12 @@ const answerCb = (token, id) => tg(token, 'answerCallbackQuery', { callback_quer
 
 async function setCommands(token, ownerChatId) {
   const common = [
-    { command: 'start', description: 'Welcome to Hub' },
-    { command: 'new',   description: 'Connect anything' },
-    { command: 'my',    description: 'My projects' },
-    { command: 'hub',   description: 'Hub status' },
-    { command: 'help',  description: 'All commands' },
+    { command: 'start',  description: 'Welcome to Hub' },
+    { command: 'new',    description: 'Connect anything' },
+    { command: 'my',     description: 'My projects' },
+    { command: 'buffer', description: 'My buffer' },
+    { command: 'hub',    description: 'Hub status' },
+    { command: 'help',   description: 'All commands' },
   ];
   await tg(token, 'setMyCommands', { commands: common, scope: { type: 'all_private_chats' } }).catch(() => {});
   if (ownerChatId) {
@@ -95,6 +102,7 @@ async function setCommands(token, ownerChatId) {
 // ── Intake: recognise what the user sent ───────────────────────────────────────
 
 const PATTERNS = [
+  { id: 'wizard_payload',     re: /^\{.*"hub_wizard"\s*:\s*true.*\}$/s },
   { id: 'telegram_bot_token', re: /^\d{5,15}:[A-Za-z0-9_-]{35,}$/ },
   { id: 'pass_sap',           re: /^pass_\d+_server_[0-9a-f]{8,}$/ },
   { id: 'pass_pap',           re: /^pass_\d+_project_[0-9a-f]{8,}$|^pap_[0-9a-f]{8,}$/ },
@@ -148,6 +156,7 @@ async function dispatch(token, upd) {
   const cmd    = parts[0].replace(/@.*$/, '').toLowerCase();
   const args   = parts.slice(1).join(' ').trim();
 
+  // Owner-only
   if (cmd === '/id') return send(token, chatId, `Your ID: <code>${chatId}</code>`);
   if (cmd === '/claim') {
     const sap = readSAP();
@@ -158,17 +167,24 @@ async function dispatch(token, upd) {
   if (!_ownerChatId && cmd === '/start') { saveOwner(chatId); return handleStart(token, chatId, true); }
 
   const owner = isOwner(chatId);
+
   switch (cmd) {
     case '/start':  return handleStart(token, chatId, owner);
-    case '/new':    return handleNew(token, chatId, args || null);
+    case '/new':    return handleNew(token, chatId, args || null, chatId);
     case '/my':     return handleMy(token, chatId, owner);
+    case '/buffer': return handleBuffer(token, chatId, args);
     case '/hub':    return handleHub(token, chatId, owner);
     case '/help':   return handleHelp(token, chatId, owner);
     case '/signin': return owner ? handleSignin(token, chatId) : send(token, chatId, 'Unknown command. /help for the list.');
   }
 
-  // Any non-command message — route through intake
-  if (!cmd.startsWith('/')) return handleIntake(token, chatId, raw, owner);
+  // Any non-command message goes through intake
+  // AND is saved to the user's personal buffer
+  if (!cmd.startsWith('/')) {
+    // Auto-save to buffer (silent, non-blocking)
+    bufAdd(chatId, raw, 'text');
+    return handleIntake(token, chatId, raw, owner);
+  }
 
   return send(token, chatId, 'Unknown command. /help for the list.');
 }
@@ -194,16 +210,9 @@ async function handleStart(token, chatId, owner) {
   );
 }
 
-// handleNew — three entry points:
-// 1. Send anything — direct intake (token/key/url/name)
-// 2. Describe in words — AI builds a plan
-// 3. Wizard button — opens webapp with full form
-async function handleNew(token, chatId, hint) {
-  // If user sent a direct hint with /new <something>, route straight to intake
+// handleNew — three entry points
+async function handleNew(token, chatId, hint, userId) {
   if (hint) return handleIntake(token, chatId, hint, isOwner(chatId));
-
-  const sn  = _ctx.config.serverNumber;
-  const sap = readSAP();
 
   return send(token, chatId,
     `<b>Connect or create anything.</b>\n\n`+
@@ -212,21 +221,83 @@ async function handleNew(token, chatId, hint) {
     `<i>Bot token, API key, project name, URL, pass link.</i>\n\n`+
     `<b>2.</b> Describe what you want to build \u2014 I\'ll generate a project plan.\n`+
     `<i>Example: \u201ca daily crypto price bot with AI summaries\u201d</i>\n\n`+
-    `<b>3.</b> Open the Wizard and fill in a form.\n`+
-    `<i>Hub will set up the project and tell you exactly what to connect.</i>`,
+    `<b>3.</b> Open the Wizard \u2014 fill in the form, copy the result, send it here.`,
     { reply_markup: kbd([
-        [{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }],
+        [{ text: '\u2728 Open Wizard', web_app: { url: wizUrl(userId || chatId) } }],
     ]) }
   );
 }
 
-// handleIntake — universal smart router
+// ── Buffer handler ───────────────────────────────────────────────────────────
+
+async function handleBuffer(token, chatId, args) {
+  const base  = _ctx.config.publicBase;
+  const userId = String(chatId);
+
+  // /buffer clear
+  if (args === 'clear') {
+    bufClear(userId);
+    return send(token, chatId, '\u2713 Buffer cleared.');
+  }
+
+  const entries = bufList(userId, 10);
+  const total   = bufCount(userId);
+  const feedUrl = `${base}/buffer/${userId}`;
+
+  if (!total) {
+    return send(token, chatId,
+      `<b>Your buffer is empty.</b>\n\n`+
+      `Everything you send to this bot (that isn\'t a command) is automatically saved here.\n\n`+
+      `Try sending a link, a thought, a note \u2014 anything.`
+    );
+  }
+
+  // Format recent entries
+  const lines = entries.slice(0, 5).map((e, i) => {
+    const preview = e.text.length > 80 ? e.text.slice(0, 77) + '\u2026' : e.text;
+    const age     = timeAgo(e.ts);
+    return `${i + 1}. <i>${age}</i>\n${escHtml(preview)}`;
+  }).join('\n\n');
+
+  const moreText = total > 5 ? `\n\n<i>+${total - 5} more. Full feed below.</i>` : '';
+
+  return send(token, chatId,
+    `<b>Buffer</b> \u2014 ${total} item${total !== 1 ? 's' : ''}\n\n${lines}${moreText}`,
+    { reply_markup: kbd([
+        [{ text: '\u{1F517} Buffer feed (JSON)', url: feedUrl }],
+        [{ text: '\u{1F5D1} Clear buffer', callback_data: 'buffer_clear' }],
+    ]) }
+  );
+}
+
+function timeAgo(ts) {
+  const d = Date.now() - ts;
+  if (d < 60000)    return `${Math.floor(d/1000)}s ago`;
+  if (d < 3600000)  return `${Math.floor(d/60000)}m ago`;
+  if (d < 86400000) return `${Math.floor(d/3600000)}h ago`;
+  return `${Math.floor(d/86400000)}d ago`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Intake: universal smart router ───────────────────────────────────────────
+
 async function handleIntake(token, chatId, text, owner) {
   const { type, value } = recognise(text);
   const sn  = _ctx.config.serverNumber;
   const sap = readSAP();
 
   switch (type) {
+
+    // ── Wizard payload (JSON from Wizard webapp)
+    case 'wizard_payload': {
+      let plan;
+      try { plan = JSON.parse(value); } catch { return send(token, chatId, '\u274c Invalid wizard payload.'); }
+      await send(token, chatId, `\u23f3 Creating project <b>${escHtml(plan.name)}</b>\u2026`);
+      return createProjectFromPlan(token, chatId, plan, sn, sap);
+    }
 
     // ── Telegram bot token
     case 'telegram_bot_token': {
@@ -236,36 +307,26 @@ async function handleIntake(token, chatId, text, owner) {
         if (!r.ok) return send(token, chatId, `\u274c Not a valid bot token.\n\n<i>${r.description}</i>`);
         botInfo = r.result;
       } catch (e) { return send(token, chatId, `\u274c Could not validate: ${e.message}`); }
-
-      const state = _ctx.modules.drafts?.getState() || { projects: [] };
+      const state      = _ctx.modules.drafts?.getState() || { projects: [] };
       const withoutBot = state.projects.filter(p => !p.bot?.token);
-
       if (withoutBot.length === 1) return attachBotToProject(token, chatId, withoutBot[0], value, botInfo, sn);
       if (withoutBot.length === 0) {
-        return send(token, chatId,
-          `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nAll projects already have bots. Send a project name to create a new one.`
-        );
+        return send(token, chatId, `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nAll projects already have bots. Send a project name to create a new one.`);
       }
       const buttons = withoutBot.slice(0, 8).map(p => ({ text: `\u2295 ${p.description || p.name}`, callback_data: `attach:${p.name}` }));
-      return send(token, chatId,
-        `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nWhich project should I attach it to?`,
-        { reply_markup: kbd(buttons) }
-      );
+      return send(token, chatId, `\u2705 Valid bot: <b>@${botInfo.username}</b>\n\nWhich project?`, { reply_markup: kbd(buttons) });
     }
 
     // ── SAP pass
     case 'pass_sap': {
-      const url = waUrl(value);
       return send(token, chatId, `\u2609 Server dashboard`,
-        { reply_markup: kbd([[{ text: '\u2609 Open dashboard', web_app: { url } }]]) });
+        { reply_markup: kbd([[{ text: '\u2609 Open dashboard', web_app: { url: waUrl(value) } }]]) });
     }
 
     // ── PAP pass
     case 'pass_pap': {
       let passToken = value;
-      if (value.startsWith('pap_')) {
-        passToken = `pass_${sn}_project_${value.replace(/^pap_/, '')}`;
-      }
+      if (value.startsWith('pap_')) passToken = `pass_${sn}_project_${value.replace(/^pap_/, '')}`;
       return send(token, chatId, `\u2699 Project dashboard`,
         { reply_markup: kbd([[{ text: '\u2699 Open dashboard', web_app: { url: waUrl(passToken) } }]]) });
     }
@@ -276,97 +337,116 @@ async function handleIntake(token, chatId, text, owner) {
     case 'anthropic_key': {
       const labels  = { openrouter_key: 'OpenRouter', openai_key: 'OpenAI', anthropic_key: 'Anthropic' };
       const envKeys = { openrouter_key: 'OPENROUTER_API_KEY', openai_key: 'OPENAI_API_KEY', anthropic_key: 'ANTHROPIC_API_KEY' };
-      const label   = labels[type];
-      const envKey  = envKeys[type];
       try {
-        fs.writeFileSync(`/etc/hub/${envKey}`, value + '\n', { mode: 0o600 });
-        return send(token, chatId,
-          `\u2705 <b>${label} key saved.</b>\n\nStored at <code>/etc/hub/${envKey}</code>.`);
-      } catch (e) { return send(token, chatId, `\u274c Failed to save: ${e.message}`); }
+        fs.writeFileSync(`/etc/hub/${envKeys[type]}`, value + '\n', { mode: 0o600 });
+        return send(token, chatId, `\u2705 <b>${labels[type]} key saved.</b>\n\n<code>/etc/hub/${envKeys[type]}</code>`);
+      } catch (e) { return send(token, chatId, `\u274c Failed: ${e.message}`); }
     }
 
-    // ── URL — set as webhook
+    // ── URL
     case 'url': {
       const state   = _ctx.modules.drafts?.getState() || { projects: [] };
       const withBot = state.projects.filter(p => p.bot?.token);
-      if (!withBot.length) {
-        return send(token, chatId,
-          `\u2705 Got a URL: <code>${value}</code>\n\nNo bots connected yet. Create a project first.`);
-      }
+      if (!withBot.length) return send(token, chatId, `\u2705 URL saved to buffer.\n\nNo bots connected yet. Create a project first.`);
       if (withBot.length === 1) return setWebhookForProject(token, chatId, withBot[0], value);
       const buttons = withBot.slice(0, 8).map(p => ({ text: `\u2295 @${p.bot.bot_username}`, callback_data: `webhook:${p.name}` }));
-      return send(token, chatId,
-        `\u2705 URL: <code>${value}</code>\n\nSet as webhook for which bot?`,
-        { reply_markup: kbd(buttons) });
+      return send(token, chatId, `\u2705 URL: <code>${escHtml(value)}</code>\n\nSet as webhook for which bot?`, { reply_markup: kbd(buttons) });
     }
 
-    // ── Project name — create
+    // ── Project name
     case 'project_name': return createProject(token, chatId, value, sn, sap);
 
-    // ── Unknown — could be a free-form prompt — try LLM plan
+    // ── Unknown — sentence? try LLM plan
     default: {
-      // If it looks like a sentence (has spaces), treat as a wizard prompt
-      if (value.includes(' ') && value.length > 8) {
-        return handlePromptPlan(token, chatId, value, sn, sap);
-      }
+      if (value.includes(' ') && value.length > 8) return handlePromptPlan(token, chatId, value, sn, sap);
       return send(token, chatId,
-        `Not sure what <code>${value.slice(0,40)}</code> is.\n\n`+
-        `I understand:\n`+
-        `\u00b7 Bot token\n\u00b7 Project name (slug)\n\u00b7 API key\n\u00b7 Webhook URL\n\u00b7 Pass link\n\u00b7 Description of what to build\n\n`+
-        `Or open the Wizard:`,
-        { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }]]) }
+        `Not sure what <code>${escHtml(value.slice(0,40))}</code> is.\n\n`+
+        `I understand: bot token, project name, API key, URL, pass link, or a description of what to build.\n\nOr open the Wizard:`,
+        { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl(chatId) } }]]) }
       );
     }
   }
 }
 
-// handlePromptPlan — user described what they want in plain text
+// handlePromptPlan — free-text description → AI plan
 async function handlePromptPlan(token, chatId, prompt, sn, sap) {
-  await send(token, chatId, `\u23f3 Generating project plan…`);
+  await send(token, chatId, `\u23f3 Generating project plan\u2026`);
   try {
     const r    = await fetch('http://localhost:3100/hub/api/wizard/generate', {
-      method:  'POST',
+      method: 'POST',
       headers: { Authorization: `Bearer ${sap}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt }),
     });
     const data = await r.json();
     if (!data.ok || !data.plan) throw new Error(data.error || 'no plan');
-
     const plan  = data.plan;
     const needs = plan.needs || [];
     const needLabels = {
-      bot_token:      '\u2295 Bot token (from @BotFather)',
-      openrouter_key: '\u2295 OpenRouter API key',
-      openai_key:     '\u2295 OpenAI API key',
-      anthropic_key:  '\u2295 Anthropic API key',
-      webhook_url:    '\u2295 Webhook URL',
+      bot_token:'\u2295 Bot token (from @BotFather)',
+      openrouter_key:'\u2295 OpenRouter key',
+      openai_key:'\u2295 OpenAI key',
+      anthropic_key:'\u2295 Anthropic key',
+      webhook_url:'\u2295 Webhook URL',
     };
-    const needsList = needs.map(n => needLabels[n] || '\u2295 ' + n).join('\n');
-
+    const needsList = needs.map(n => needLabels[n] || '\u2295 '+n).join('\n');
     const text =
       `\u2728 <b>Project plan</b>\n\n`+
-      `<b>${plan.name}</b> \u2014 ${plan.description}\n`+
-      `Type: ${plan.type} \u00b7 Stack: ${plan.stack}\n\n`+
-      (plan.description_long ? `${plan.description_long}\n\n` : '')+
+      `<b>${escHtml(plan.name)}</b> \u2014 ${escHtml(plan.description)}\n`+
+      `Type: ${plan.type} \u00b7 Stack: ${escHtml(plan.stack||'')}\n\n`+
+      (plan.description_long ? `${escHtml(plan.description_long)}\n\n` : '')+
       (needsList ? `<b>You\'ll need:</b>\n${needsList}\n\n` : '')+
       `Create this project?`;
-
-    const papSecret  = (sap || '').slice(0, 12); // not real PAP, just for URL shape
-    const wizardUrl  = `${_ctx.config.publicBase}/hub/webapp?mode=wizard`;
-
     return send(token, chatId, text, { reply_markup: kbd([
-        [{ text: `\u2713 Create ${plan.name}`, callback_data: `create_plan:${plan.name}:${encodeURIComponent(plan.description)}` }],
-        [{ text: '\u2728 Open Wizard instead', web_app: { url: wizardUrl } }],
+        [{ text: `\u2713 Create ${escHtml(plan.name)}`, callback_data: `create_plan:${plan.name}:${encodeURIComponent(plan.description)}` }],
+        [{ text: '\u2728 Open Wizard instead', web_app: { url: wizUrl(chatId) } }],
     ]) });
   } catch (e) {
     return send(token, chatId,
-      `Couldn\'t generate a plan: ${e.message}\n\nTry the Wizard instead:`,
-      { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl() } }]]) }
+      `Couldn\'t generate a plan: ${e.message}\n\nTry the Wizard:`,
+      { reply_markup: kbd([[{ text: '\u2728 Open Wizard', web_app: { url: wizUrl(chatId) } }]]) }
     );
   }
 }
 
 // ── Intake actions ───────────────────────────────────────────────────────────
+
+async function createProjectFromPlan(token, chatId, plan, sn, sap) {
+  // Create the project
+  try {
+    const res  = await fetch('http://localhost:3100/drafts/projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sap}`, 'Content-Type': 'application/json' },
+      body:   JSON.stringify({ name: plan.name, description: plan.description }),
+    });
+    const data = await res.json();
+    if (!data.ok) return send(token, chatId, `\u274c Failed to create project: ${data.error}`);
+
+    const papSecret = (data.pap_token || '').replace(/^pap_/, '');
+    const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
+    const needs     = plan.needs || [];
+    const base      = _ctx.config.publicBase;
+
+    const needLabels = {
+      bot_token:      'Bot token \u2014 send @BotFather token here',
+      openrouter_key: 'OpenRouter key \u2014 send sk-or-v1-... here',
+      openai_key:     'OpenAI key \u2014 send sk-... here',
+      anthropic_key:  'Anthropic key \u2014 send sk-ant-... here',
+      webhook_url:    'Webhook URL \u2014 send https://... here',
+    };
+    const needLines = needs.length
+      ? '\n\n<b>Now send me:</b>\n' + needs.map(n => '\u2295 ' + (needLabels[n] || n)).join('\n')
+      : '';
+
+    return send(token, chatId,
+      `\u2705 <b>${escHtml(plan.name)}</b> created.\n\n`+
+      `<a href="${data.live_url}">${data.live_url}</a>${needLines}`,
+      { reply_markup: dashPass ? kbd([[
+          { text: '\u25b6 Open', url: data.live_url },
+          { text: '\u2699 Dashboard', web_app: { url: waUrl(dashPass) } },
+      ]]) : undefined }
+    );
+  } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
+}
 
 async function createProject(token, chatId, name, sn, sap) {
   try {
@@ -379,13 +459,12 @@ async function createProject(token, chatId, name, sn, sap) {
     if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error}`);
     const papSecret = (data.pap_token || '').replace(/^pap_/, '');
     const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
-    const buttons   = [[
-      { text: '\u25b6 Open', url: data.live_url },
-      dashPass ? { text: '\u2699 Dashboard', web_app: { url: waUrl(dashPass) } } : { text: '\u2699 Dashboard', url: data.pap_activation_url },
-    ]];
     return send(token, chatId,
-      `\u2705 <b>${name}</b> created.\n\n<a href="${data.live_url}">${data.live_url}</a>`,
-      { reply_markup: kbd(buttons) });
+      `\u2705 <b>${escHtml(name)}</b> created.\n\n<a href="${data.live_url}">${data.live_url}</a>`,
+      { reply_markup: kbd([[
+          { text: '\u25b6 Open', url: data.live_url },
+          dashPass ? { text: '\u2699 Dashboard', web_app: { url: waUrl(dashPass) } } : { text: '\u2699 Dashboard', url: data.pap_activation_url },
+      ]]) });
   } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
@@ -402,9 +481,8 @@ async function attachBotToProject(token, chatId, project, botToken, botInfo, sn)
     if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error || data.detail}`);
     const papSecret = papToken.replace(/^pap_/, '');
     return send(token, chatId,
-      `\u2705 <b>@${botInfo.username}</b> linked to <b>${project.description || project.name}</b>.`,
-      { reply_markup: kbd([[{ text: '\u2699 Dashboard', web_app: { url: waUrl(`pass_${sn}_project_${papSecret}`) } }]]) }
-    );
+      `\u2705 <b>@${botInfo.username}</b> linked to <b>${escHtml(project.description || project.name)}</b>.`,
+      { reply_markup: kbd([[{ text: '\u2699 Dashboard', web_app: { url: waUrl(`pass_${sn}_project_${papSecret}`) } }]]) });
   } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
@@ -419,7 +497,7 @@ async function setWebhookForProject(token, chatId, project, url) {
     });
     const data = await r.json();
     if (!data.ok) return send(token, chatId, `\u274c Failed: ${data.error || data.detail}`);
-    return send(token, chatId, `\u2705 Webhook set for <b>@${project.bot.bot_username}</b>.\n\n<code>${url}</code>`);
+    return send(token, chatId, `\u2705 Webhook set for <b>@${project.bot.bot_username}</b>.\n\n<code>${escHtml(url)}</code>`);
   } catch (e) { return send(token, chatId, `\u274c Error: ${e.message}`); }
 }
 
@@ -485,6 +563,7 @@ async function handleHelp(token, chatId, owner) {
     `/start \u2014 welcome\n`+
     `/new \u2014 connect or create anything\n`+
     `/my \u2014 my projects\n`+
+    `/buffer \u2014 my buffer\n`+
     `/hub \u2014 server status\n`+
     `/help \u2014 this list`;
   if (owner) text += `\n\n<b>Owner</b>\n/signin \u2014 server access\n/id \u2014 your ID`;
