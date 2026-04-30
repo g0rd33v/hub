@@ -135,7 +135,7 @@ Hub 0.1 runs in production at hub.labs.co. The current implementation includes:
 - Three-server backup architecture (hub → beta + drafts.labs.vc)
 - Public reference at hub.labs.co/docs
 
-Vasilisa21robot is the first project using the full stack — frontend, bot, and HTTP API sharing the same KV.
+A project on Hub today combines a frontend, a Telegram bot, an HTTP API, and a shared KV store on a single URL — the full stack lives in one place, with no external infrastructure required.
 
 ---
 
