@@ -1,0 +1,25 @@
+{
+  "name": "hub",
+  "version": "0.2.0",
+  "description": "Hub — protocol-level routing conductor for intelligence, communication, and computation.",
+  "type": "module",
+  "main": "hub/server.js",
+  "scripts": {
+    "start": "node hub/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/g0rd33v/hub.git"
+  },
+  "homepage": "https://hub.labs.co",
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.0",
+    "simple-git": "^3.25.0"
+  }
+}
