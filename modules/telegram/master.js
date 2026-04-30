@@ -13,6 +13,8 @@ export const hooks = {
   onNewProject: () => {}, onMainCommit:  () => {}, onAAPMerged: () => {}, onNewAAPCreated: () => {},
 };
 
+// —— token + owner ——
+
 function tokenPath() { return _ctx.paths.masterBotToken(); }
 function ownerPath() { return path.join(_ctx.config.configDir, 'owner.id'); }
 
@@ -53,8 +55,22 @@ function saveOwner(chatId) {
 function isOwner(chatId) { return !!_ownerChatId && String(chatId) === _ownerChatId; }
 function readSAP()       { try { return fs.readFileSync('/etc/hub/sap.token','utf8').trim(); } catch { return ''; } }
 
-// —— Telegram API ——
+// —— helpers ——
 
+// Build a webapp URL: /hub/webapp?token=<pass_N_role_hex>
+function webappUrl(passToken) {
+  const base = _ctx.config.publicBase;
+  return `${base}/hub/webapp?token=${encodeURIComponent(passToken)}`;
+}
+
+// Build inline keyboard rows.
+// Each item: { text, url } for normal link, or { text, web_app } for Mini App.
+function kbd(buttons) {
+  const rows = buttons.map(b => Array.isArray(b) ? b : [b]);
+  return { inline_keyboard: rows };
+}
+
+// Telegram API
 async function tg(token, method, params = {}) {
   const res = await fetch('https://api.telegram.org/bot'+token+'/'+method, {
     method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(params),
@@ -71,30 +87,6 @@ async function send(token, chatId, text, extra = {}) {
 
 async function answerCallback(token, callbackId, text = '') {
   return tg(token, 'answerCallbackQuery', { callback_query_id: callbackId, text });
-}
-
-// Build inline keyboard rows.
-// Each item: { text, url } for plain link, or { text, web_app_url } for Mini App,
-//            or array of such items for a multi-column row.
-function kbd(buttons) {
-  const rows = buttons.map(b => {
-    if (Array.isArray(b)) {
-      return b.map(btn => mkBtn(btn));
-    }
-    return [mkBtn(b)];
-  });
-  return { inline_keyboard: rows };
-}
-
-function mkBtn(b) {
-  if (b.web_app_url) return { text: b.text, web_app: { url: b.web_app_url } };
-  return { text: b.text, url: b.url };
-}
-
-// Build webapp URL for a given pass token
-function webappUrl(token) {
-  const base = _ctx.config.publicBase;
-  return `${base}/hub/webapp?token=${encodeURIComponent(token)}`;
 }
 
 async function setCommands(token, ownerChatId) {
@@ -162,11 +154,9 @@ async function dispatch(token, upd) {
     if (args.trim() === sap) { saveOwner(chatId); return send(token, chatId, '\u2713 You are now the owner of this Hub server.'); }
     return send(token, chatId, 'Wrong token.');
   }
-
   if (!_ownerChatId && cmd === '/start') { saveOwner(chatId); return handleStart(token, chatId, true); }
 
   const owner = isOwner(chatId);
-
   switch (cmd) {
     case '/new':    return handleNew(token, chatId, args);
     case '/my':     return handleMy(token, chatId, owner);
@@ -187,7 +177,7 @@ async function handleStart(token, chatId, owner) {
       `<b>Hub</b> \u2014 connect everything. Manage from chat.\n\n`+
       `Hub lets you run bots, sites, apps and APIs \u2014 all from one place.\n\n`+
       `/new \u2014 create a project\n/hub \u2014 hub status\n/help \u2014 help`,
-      { reply_markup: kbd([{ text: 'hub.labs.co \u2192', url: base }]) }
+      { reply_markup: kbd([{ text: 'hub.labs.co', url: base }]) }
     );
   }
   const state = _ctx.modules.drafts?.getState() || { projects: [] };
@@ -214,17 +204,18 @@ async function handleNew(token, chatId, args) {
     });
     const data = await res.json();
     if (data.ok) {
-      const papSecret = data.pap_activation_url?.split('_project_')[1];
+      const sn  = _ctx.config.serverNumber;
       const base = _ctx.config.publicBase;
-      const sn   = _ctx.config.serverNumber;
-      const passToken = papSecret ? `pass_${sn}_project_${papSecret}` : null;
+      // Extract PAP secret from pap_activation_url or pap_token
+      const papSecret = (data.pap_token || '').replace(/^pap_/, '');
+      const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
+      const dashUrl   = dashPass ? webappUrl(dashPass) : data.pap_activation_url;
       const buttons = [
-        [{ text: '\u25b6 Open live', url: data.live_url }],
+        [{ text: '\u25b6 Open live', url: data.live_url },
+         dashPass
+           ? { text: '\u2699 Dashboard', web_app: { url: dashUrl } }
+           : { text: '\u2699 Dashboard', url: dashUrl }],
       ];
-      if (passToken) {
-        // webapp opens Mini App inline, fallback url for browsers
-        buttons[0].push({ text: '\u2699 Dashboard', web_app_url: webappUrl(passToken) });
-      }
       return send(token, chatId,
         `<b>${name}</b> created.\n\nLive: <a href="${data.live_url}">${data.live_url}</a>`,
         { reply_markup: kbd(buttons) }
@@ -246,30 +237,29 @@ async function handleMy(token, chatId, owner) {
 
   const buttons = [];
 
-  // Owner: server dashboard as Mini App
+  // Owner: server dashboard Mini App button first
   if (owner && sap) {
-    const sapPassToken = `pass_${sn}_server_${sap}`;
-    buttons.push({ text: '\u2609 Hub Server', web_app_url: webappUrl(sapPassToken) });
+    const serverPass = `pass_${sn}_server_${sap}`;
+    buttons.push({ text: '\u2609 Hub Server', web_app: { url: webappUrl(serverPass) } });
   }
 
-  // One row per project: [Live URL] [Dashboard Mini App]
+  // One row per project: [Live link] [Dashboard Mini App]
   for (const p of state.projects) {
     const papSecret = p.pap?.token?.replace(/^pap_/,'');
     const liveUrl   = `${base}/${p.name}/`;
     const label     = p.description || p.name;
     const botTag    = p.bot?.token ? ` \u00b7 @${p.bot.bot_username}` : '';
-    const passToken = papSecret ? `pass_${sn}_project_${papSecret}` : null;
 
     const row = [{ text: `\u25b6 ${label}${botTag}`, url: liveUrl }];
-    if (passToken) {
-      row.push({ text: '\u2699 dashboard', web_app_url: webappUrl(passToken) });
+    if (papSecret) {
+      const passToken = `pass_${sn}_project_${papSecret}`;
+      row.push({ text: '\u2699 dashboard', web_app: { url: webappUrl(passToken) } });
     }
     buttons.push(row);
   }
 
   const count = state.projects.length;
   const bots  = state.projects.filter(p => p.bot?.token).length;
-
   return send(token, chatId,
     `<b>${count} project${count!==1?'s':''}</b> \u00b7 ${bots} bot${bots!==1?'s':''} active`,
     { reply_markup: kbd(buttons) }
@@ -296,8 +286,8 @@ async function handleHub(token, chatId, owner) {
     const buttons = [];
     if (owner && sap) {
       // Server dashboard as Mini App
-      const sapPassToken = `pass_${sn}_server_${sap}`;
-      buttons.push({ text: '\u2609 Server dashboard', web_app_url: webappUrl(sapPassToken) });
+      const serverPass = `pass_${sn}_server_${sap}`;
+      buttons.push({ text: '\u2609 Server dashboard', web_app: { url: webappUrl(serverPass) } });
       // Each project dashboard as Mini App
       for (const p of state.projects) {
         const papSecret = p.pap?.token?.replace(/^pap_/,'');
@@ -305,11 +295,11 @@ async function handleHub(token, chatId, owner) {
           const label  = p.description || p.name;
           const botTag = p.bot?.token ? ` @${p.bot.bot_username}` : '';
           const passToken = `pass_${sn}_project_${papSecret}`;
-          buttons.push({ text: `\u2699 ${label}${botTag}`, web_app_url: webappUrl(passToken) });
+          buttons.push({ text: `\u2699 ${label}${botTag}`, web_app: { url: webappUrl(passToken) } });
         }
       }
     } else {
-      buttons.push({ text: 'hub.labs.co \u2192', url: base });
+      buttons.push({ text: 'hub.labs.co', url: base });
     }
 
     return send(token, chatId, text, { reply_markup: kbd(buttons) });
@@ -329,12 +319,17 @@ async function handleHelp(token, chatId, owner) {
 
 async function handleSignin(token, chatId) {
   const sap  = readSAP();
-  const base = _ctx.config.publicBase;
   const sn   = _ctx.config.serverNumber;
   const passToken = `pass_${sn}_server_${sap}`;
+  // Send both: Mini App button (for Telegram) + plain URL (for browser)
+  const base = _ctx.config.publicBase;
+  const signinUrl = `${base}/signin/${passToken}`;
   return send(token, chatId,
-    `Server dashboard:\n\n<i>Full server access. Don't share.</i>`,
-    { reply_markup: kbd([{ text: '\u2609 Open server dashboard', web_app_url: webappUrl(passToken) }]) }
+    `Server dashboard\n\n<i>Full server access. Don\u2019t share.</i>`,
+    { reply_markup: kbd([
+        [{ text: '\u2609 Open in Telegram', web_app: { url: webappUrl(passToken) } }],
+        [{ text: '\u2609 Open in browser',  url: signinUrl }],
+    ]) }
   );
 }
 
