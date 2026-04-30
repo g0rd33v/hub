@@ -1,6 +1,5 @@
 // modules/drafts/webapp-client.js — Hub v0.3
-// Browser SPA: SAP / PAP / AAP views
-// Loaded as static file at /hub/webapp-client.js
+// Browser SPA: SAP / PAP / AAP / Wizard views
 
 (function () {
 'use strict';
@@ -12,10 +11,11 @@ const ROOT  = document.getElementById('root');
 const BACK  = document.getElementById('back-nav');
 const TOAST = document.getElementById('toast');
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const MODE  = new URLSearchParams(location.search).get('mode')  || '';
 const BASE  = location.origin;
 
-let STATE     = null; // current PAP/AAP state (for reload)
-let SAP_STATE = null; // cached SAP state (for back-nav)
+let STATE     = null;
+let SAP_STATE = null;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -27,8 +27,8 @@ const fmtNum = n => n == null ? '0' : Number(n).toLocaleString();
 const timeAgo = iso => {
   if (!iso) return 'never';
   const d = Date.now() - new Date(iso);
-  if (d < 60_000)    return `${Math.floor(d / 1_000)}s ago`;
-  if (d < 3_600_000) return `${Math.floor(d / 60_000)}m ago`;
+  if (d < 60_000)     return `${Math.floor(d / 1_000)}s ago`;
+  if (d < 3_600_000)  return `${Math.floor(d / 60_000)}m ago`;
   if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h ago`;
   return `${Math.floor(d / 86_400_000)}d ago`;
 };
@@ -134,7 +134,7 @@ const renderPAP = d => {
   h    += `<h1>${esc(d.description)}</h1>`;
   h    += `<p class="lead"><a href="${esc(d.live_url)}" target="_blank">${esc(d.live_url)}</a></p>`;
 
-  // ── 1. BOT
+  // 1. BOT
   h += `<hr class="divider"><div class="sec"><div class="sec-title">Bot</div>`;
   if (d.bot) {
     h += `<div class="card">`;
@@ -143,12 +143,10 @@ const renderPAP = d => {
     h += `<div class="stat-box"><div class="stat-n">${d.bot.subscribers}</div><div class="stat-l">subscribers</div></div>`;
     h += `<div class="stat-box"><div class="stat-n">${d.bot.analytics_enabled ? 'on' : 'off'}</div><div class="stat-l">analytics</div></div>`;
     h += `</div>`;
-
     if (d.bot.mode === 'webhook') {
       h += `<div class="row"><span class="rk">webhook</span><span class="rv" style="font-size:11px">${esc(d.bot.webhook_url)}</span></div>`;
       if (d.bot.webhook_log?.length) {
-        h += `<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#444;margin:10px 0 3px">Recent calls</div>`;
-        h += `<table class="log-tbl">`;
+        h += `<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#444;margin:10px 0 3px">Recent calls</div><table class="log-tbl">`;
         for (const e of d.bot.webhook_log) {
           const ok  = e.status >= 200 && e.status < 300;
           const txt = e.status > 0 ? String(e.status) : (e.error || 'err');
@@ -157,7 +155,6 @@ const renderPAP = d => {
         h += `</table>`;
       }
     }
-
     if (d.bot.mode === 'polling') {
       h += `<div style="margin-top:10px"><input type="url" id="webhookInput" placeholder="https://your-app.vercel.app/webhook"></div>`;
     }
@@ -167,70 +164,61 @@ const renderPAP = d => {
     h += `<button class="btn btn-blue" id="syncBotBtn">&#8635; sync bot</button>`;
     h += `<button class="btn btn-danger" id="unlinkBotBtn">unlink</button>`;
     h += `</div></div>`;
-
-    // Broadcast
     const subWord = d.bot.subscribers === 1 ? 'subscriber' : 'subscribers';
-    h += `<div class="card">`;
-    h += `<div class="card-head"><span class="tag blue">broadcast</span></div>`;
+    h += `<div class="card"><div class="card-head"><span class="tag blue">broadcast</span></div>`;
     h += `<div class="muted" style="margin-bottom:8px">Send to all ${d.bot.subscribers} ${subWord}.</div>`;
     h += `<div class="broadcast-area"><textarea id="broadcastMsg" rows="3" placeholder="What is new?"></textarea></div>`;
-    h += `<div class="actions"><button class="btn btn-prim btn-full" id="broadcastBtn">&#8801; send broadcast</button></div>`;
-    h += `</div>`;
+    h += `<div class="actions"><button class="btn btn-prim btn-full" id="broadcastBtn">&#8801; send broadcast</button></div></div>`;
   } else {
     h += `<div class="card">`;
     h += `<div class="muted" style="margin-bottom:10px">No bot linked. Get a token from @BotFather.</div>`;
     h += `<input type="text" id="botTokenInput" placeholder="123456:ABC...">`;
-    h += `<div class="actions"><button class="btn btn-prim btn-full" id="linkBotBtn">Link bot</button></div>`;
-    h += `</div>`;
+    h += `<div class="actions"><button class="btn btn-prim btn-full" id="linkBotBtn">Link bot</button></div></div>`;
   }
   h += `</div>`;
 
-  // ── 2. AUDIENCE
+  // 2. AUDIENCE
   h += `<hr class="divider"><div class="sec"><div class="sec-title">Audience</div>`;
   h += d.bot
     ? `<div id="audienceSection"><div class="card"><div class="muted">Loading analytics&hellip;</div></div></div>`
     : `<div class="card"><div class="muted">Link a bot to see audience data.</div></div>`;
   h += `</div>`;
 
-  // ── 3. GITHUB
+  // 3. GITHUB
   h += `<hr class="divider"><div class="sec"><div class="sec-title">GitHub</div><div class="card">`;
   h += `<div class="card-head"><span class="dot ${d.github?.repo ? '' : 'off'}"></span>github</div>`;
   if (d.github?.repo) {
     h += `<div class="row"><span class="rk">repo</span><span class="rv">${esc(d.github.repo)}</span></div>`;
     h += `<div class="toggle-row"><div><div style="font-size:13px;font-weight:600">auto-sync</div><div class="muted">push on every commit</div></div>`;
     h += `<button class="toggle ${d.github.autosync ? 'on' : ''}" id="autosyncToggle"></button></div>`;
-    h += `<div class="actions">`;
-    h += `<button class="btn btn-ghost" id="githubSyncBtn">&#8593; push now</button>`;
-    h += `<button class="btn btn-danger" id="githubUnlinkBtn">unlink</button>`;
-    h += `</div>`;
+    h += `<div class="actions"><button class="btn btn-ghost" id="githubSyncBtn">&#8593; push now</button><button class="btn btn-danger" id="githubUnlinkBtn">unlink</button></div>`;
   } else {
     h += `<input type="text" id="githubRepoInput" placeholder="owner/repo">`;
     h += `<div class="actions"><button class="btn btn-prim btn-full" id="githubLinkBtn">&#128279; link repo</button></div>`;
   }
   h += `</div></div>`;
 
-  // ── 4. CONTRIBUTORS
+  // 4. CONTRIBUTORS
   const cCount = d.aaps?.length ? ` (${d.aaps.length})` : '';
   h += `<hr class="divider"><div class="sec"><div class="sec-title">Contributors${cCount}</div>`;
   if (d.aaps?.length) {
     for (const a of d.aaps) {
-      h += `<div class="card"><div class="row"><span class="rk">${esc(a.name)}</span>`;
-      h += `<span class="rv"><a href="${esc(a.url)}">dashboard</a></span></div></div>`;
+      h += `<div class="card"><div class="row"><span class="rk">${esc(a.name)}</span><span class="rv"><a href="${esc(a.url)}">dashboard</a></span></div></div>`;
     }
   } else {
     h += `<div class="card"><div class="muted">No contributors yet.</div></div>`;
   }
   h += `</div>`;
 
-  // ── 5. YOUR PASS
+  // 5. YOUR PASS
   h += `<hr class="divider"><div class="sec"><div class="sec-title">Your pass (PAP)</div>`;
   h += `<div class="card"><div class="muted" style="margin-bottom:8px">Bookmark this link.</div>`;
   h += `<div class="actions"><button class="btn btn-ghost" id="copyPAPBtn">&#128203; copy link</button></div></div>`;
-  h += `</div></div>`; // close back-top
+  h += `</div></div>`;
 
   ROOT.innerHTML = h;
 
-  // Wire up bot events
+  // Wire bot events
   el('linkBotBtn')?.addEventListener('click', () => {
     const t = el('botTokenInput')?.value.trim();
     if (!t) return;
@@ -238,14 +226,12 @@ const renderPAP = d => {
       .then(r => r.ok ? (toast(`Bot linked: @${r.bot.bot_username}`), setTimeout(reloadPAP, 600)) : toast(`Failed: ${r.detail || r.error}`))
       .catch(e => toast(`Error: ${e.message}`));
   });
-
   el('unlinkBotBtn')?.addEventListener('click', () => {
     if (!confirm('Unlink this bot?')) return;
     apiCall('DELETE', `${apiBase}/project/bot`)
       .then(r => r.ok ? (toast('Bot unlinked'), setTimeout(reloadPAP, 600)) : toast(`Failed: ${r.error}`))
       .catch(e => toast(`Error: ${e.message}`));
   });
-
   el('webhookModeBtn')?.addEventListener('click', () => {
     if (d.bot.mode === 'polling') {
       const url = el('webhookInput')?.value.trim();
@@ -259,13 +245,11 @@ const renderPAP = d => {
         .catch(e => toast(`Error: ${e.message}`));
     }
   });
-
   el('syncBotBtn')?.addEventListener('click', () => {
     apiCall('POST', `${BASE}/hub/api/bot/sync`, {})
       .then(r => r.ok ? toast('Bot synced to Telegram') : toast(`Failed: ${r.error || r.detail}`))
       .catch(e => toast(`Error: ${e.message}`));
   });
-
   el('broadcastBtn')?.addEventListener('click', () => {
     const msg = el('broadcastMsg')?.value.trim();
     const btn = el('broadcastBtn');
@@ -282,147 +266,109 @@ const renderPAP = d => {
       .catch(e => toast(`Error: ${e.message}`))
       .finally(() => { btn.textContent = '\u2261 send broadcast'; btn.disabled = false; });
   });
-
-  // GitHub events
   el('autosyncToggle')?.addEventListener('click', function () {
     const next = !d.github.autosync;
-    d.github.autosync  = next;
-    this.className     = `toggle ${next ? 'on' : ''}`;
+    d.github.autosync = next;
+    this.className = `toggle ${next ? 'on' : ''}`;
     apiCall('PUT', `${apiBase}/project/github-autosync`, { enabled: next })
       .then(() => toast(next ? 'Auto-sync on' : 'Auto-sync off'))
       .catch(e => toast(`Error: ${e.message}`));
   });
-
   el('githubSyncBtn')?.addEventListener('click', () => {
     apiCall('POST', `${apiBase}/github/sync`, {})
       .then(r => r.ok ? toast('Pushed to GitHub') : toast(`Failed: ${r.error || r.detail}`))
       .catch(e => toast(`Error: ${e.message}`));
   });
-
   el('githubLinkBtn')?.addEventListener('click',   () => toast('Use web dashboard to link GitHub'));
   el('githubUnlinkBtn')?.addEventListener('click', () => toast('Use web dashboard to unlink GitHub'));
-
   el('copyPAPBtn')?.addEventListener('click', () => {
     const url = d.pap_url || location.href;
-    navigator.clipboard?.writeText(url).then(() => toast('Link copied'))
-      .catch(() => toast(`Copy: ${url}`));
+    navigator.clipboard?.writeText(url).then(() => toast('Link copied')).catch(() => toast(`Copy: ${url}`));
   });
 
-  // Load audience analytics async
   if (d.bot) loadAudience(d.pap_token);
 };
 
-// ── Audience section ──────────────────────────────────────────────────────────
+// ── Audience ──────────────────────────────────────────────────────────────────
 
 const loadAudience = papToken => {
   fetch(`${BASE}/hub/api/analytics?token=${encodeURIComponent(papToken)}`)
-    .then(r => r.json())
-    .then(renderAudience)
-    .catch(() => {
-      const sec = el('audienceSection');
-      if (sec) sec.innerHTML = `<div class="card"><div class="muted">Analytics unavailable.</div></div>`;
-    });
+    .then(r => r.json()).then(renderAudience)
+    .catch(() => { const sec = el('audienceSection'); if (sec) sec.innerHTML = `<div class="card"><div class="muted">Analytics unavailable.</div></div>`; });
 };
 
 const renderAudience = s => {
   const sec = el('audienceSection');
   if (!sec) return;
-  if (!s || s.error) {
-    sec.innerHTML = `<div class="card"><div class="muted">No analytics data yet.</div></div>`;
-    return;
-  }
+  if (!s || s.error) { sec.innerHTML = `<div class="card"><div class="muted">No analytics data yet.</div></div>`; return; }
 
-  let h = '';
+  let h = `<div class="stat-grid stat-grid-4">`;
+  h    += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_total)}</div><div class="stat-l">users</div></div>`;
+  h    += `<div class="stat-box"><div class="stat-n">${fmtNum(s.events_total)}</div><div class="stat-l">events</div></div>`;
+  h    += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_active_7d)}</div><div class="stat-l">DAU 7d</div></div>`;
+  h    += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_active_30d)}</div><div class="stat-l">DAU 30d</div></div>`;
+  h    += `</div>`;
 
-  // Stat boxes
-  h += `<div class="stat-grid stat-grid-4">`;
-  h += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_total)}</div><div class="stat-l">users</div></div>`;
-  h += `<div class="stat-box"><div class="stat-n">${fmtNum(s.events_total)}</div><div class="stat-l">events</div></div>`;
-  h += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_active_7d)}</div><div class="stat-l">DAU 7d</div></div>`;
-  h += `<div class="stat-box"><div class="stat-n">${fmtNum(s.users_active_30d)}</div><div class="stat-l">DAU 30d</div></div>`;
-  h += `</div>`;
-
-  // Languages + Countries side by side
-  const langEntries = Object.entries(s.by_language || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const counEntries = Object.entries(s.by_country  || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-  if (langEntries.length || counEntries.length) {
+  const langE = Object.entries(s.by_language || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const counE = Object.entries(s.by_country  || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if (langE.length || counE.length) {
     h += `<div class="two-col">`;
-    if (langEntries.length) {
-      const tot = langEntries.reduce((s, [, n]) => s + n, 0) || 1;
+    if (langE.length) {
+      const tot = langE.reduce((s,[,n])=>s+n,0)||1;
       h += `<div><div class="mini-title">Languages</div>`;
-      for (const [l, n] of langEntries) {
-        const pct = Math.round((n / tot) * 100);
-        h += `<div class="bar-row"><span class="bar-label">${esc(l)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-n">${n}</span></div>`;
+      for (const [l,n] of langE) {
+        h += `<div class="bar-row"><span class="bar-label">${esc(l)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/tot*100)}%"></div></div><span class="bar-n">${n}</span></div>`;
       }
       h += `</div>`;
     }
-    if (counEntries.length) {
-      const tot = counEntries.reduce((s, [, n]) => s + n, 0) || 1;
+    if (counE.length) {
+      const tot = counE.reduce((s,[,n])=>s+n,0)||1;
       h += `<div><div class="mini-title">Countries</div>`;
-      for (const [c, n] of counEntries) {
-        const pct = Math.round((n / tot) * 100);
-        h += `<div class="bar-row"><span class="bar-label">${esc(c)}</span><div class="bar-track"><div class="bar-fill bar-fill-purple" style="width:${pct}%"></div></div><span class="bar-n">${n}</span></div>`;
+      for (const [c,n] of counE) {
+        h += `<div class="bar-row"><span class="bar-label">${esc(c)}</span><div class="bar-track"><div class="bar-fill bar-fill-purple" style="width:${Math.round(n/tot*100)}%"></div></div><span class="bar-n">${n}</span></div>`;
       }
       h += `</div>`;
     }
     h += `</div>`;
   }
 
-  // Peak hours (24 bars)
   if (s.by_hour_utc?.length === 24) {
     const hMax = Math.max(...s.by_hour_utc) || 1;
     h += `<div class="mini-title" style="margin-top:12px">Peak hours (UTC)</div><div class="hour-chart">`;
     for (let i = 0; i < 24; i++) {
-      const pct   = Math.round((s.by_hour_utc[i] / hMax) * 100);
-      const isTop = s.by_hour_utc[i] === hMax && hMax > 0;
-      h += `<div class="hour-bar-wrap" title="${i}h: ${s.by_hour_utc[i]} events">`;
-      h += `<div class="hour-bar${isTop ? ' hour-bar-top' : ''}" style="height:${Math.max(pct, 4)}%"></div>`;
-      h += `<div class="hour-label">${i % 6 === 0 ? `${i}h` : ''}</div>`;
-      h += `</div>`;
+      const pct = Math.round(s.by_hour_utc[i] / hMax * 100);
+      h += `<div class="hour-bar-wrap" title="${i}h: ${s.by_hour_utc[i]}"><div class="hour-bar${s.by_hour_utc[i]===hMax&&hMax>0?' hour-bar-top':''}" style="height:${Math.max(pct,4)}%"></div><div class="hour-label">${i%6===0?i+'h':''}</div></div>`;
     }
     h += `</div>`;
   }
 
-  // Day of week (7 bars)
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if (s.by_dow_utc?.length === 7) {
     const dMax = Math.max(...s.by_dow_utc) || 1;
     h += `<div class="mini-title" style="margin-top:10px">Day of week</div><div class="dow-chart">`;
     for (let j = 0; j < 7; j++) {
-      const pct = Math.round((s.by_dow_utc[j] / dMax) * 100);
-      h += `<div class="dow-bar-wrap" title="${DOW[j]}: ${s.by_dow_utc[j]}">`;
-      h += `<div class="dow-bar" style="height:${Math.max(pct, 4)}%"></div>`;
-      h += `<div class="dow-label">${DOW[j]}</div>`;
-      h += `</div>`;
+      h += `<div class="dow-bar-wrap" title="${DOW[j]}: ${s.by_dow_utc[j]}"><div class="dow-bar" style="height:${Math.max(Math.round(s.by_dow_utc[j]/dMax*100),4)}%"></div><div class="dow-label">${DOW[j]}</div></div>`;
     }
     h += `</div>`;
   }
 
-  // Top commands
-  const cmdEntries = Object.entries(s.by_command || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (cmdEntries.length) {
-    h += `<div class="mini-title" style="margin-top:10px">Commands</div>`;
-    h += `<div class="cmd-list">`;
-    for (const [cmd, n] of cmdEntries) {
-      h += `<div class="row"><span class="rk">${esc(cmd)}</span><span class="rv">${fmtNum(n)} times</span></div>`;
-    }
+  const cmdE = Object.entries(s.by_command||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if (cmdE.length) {
+    h += `<div class="mini-title" style="margin-top:10px">Commands</div><div class="cmd-list">`;
+    for (const [cmd,n] of cmdE) h += `<div class="row"><span class="rk">${esc(cmd)}</span><span class="rv">${fmtNum(n)} times</span></div>`;
     h += `</div>`;
   }
 
-  // Footer stats
-  const footParts = [];
-  if (s.subscribed)    footParts.push(`+${s.subscribed} subscribed`);
-  if (s.unsubscribed)  footParts.push(`\u2212${s.unsubscribed} left`);
-  if (s.last_event_at) footParts.push(`last event: ${timeAgo(s.last_event_at)}`);
-  h += `<div style="margin-top:10px;font-size:12px;color:#555">${footParts.join(' &middot; ')}</div>`;
+  const fp = [];
+  if (s.subscribed)    fp.push(`+${s.subscribed} subscribed`);
+  if (s.unsubscribed)  fp.push(`\u2212${s.unsubscribed} left`);
+  if (s.last_event_at) fp.push(`last event: ${timeAgo(s.last_event_at)}`);
+  h += `<div style="margin-top:10px;font-size:12px;color:#555">${fp.join(' &middot; ')}</div>`;
   h += `<div style="margin-top:8px"><button class="btn btn-ghost" id="analyticsDownloadBtn" style="font-size:12px">&#8595; download data</button></div>`;
 
   sec.innerHTML = h;
-
   el('analyticsDownloadBtn')?.addEventListener('click', () => {
-    const tok = STATE?.pap_token || TOKEN;
-    window.location.href = `${BASE}/hub/api/analytics/download?token=${encodeURIComponent(tok)}`;
+    window.location.href = `${BASE}/hub/api/analytics/download?token=${encodeURIComponent(STATE?.pap_token || TOKEN)}`;
   });
 };
 
@@ -435,21 +381,169 @@ const renderAAP = d => {
   h    += `<hr class="divider"><div class="sec"><div class="sec-title">Build loop</div><div class="card">`;
   h    += `<div class="row"><span class="rk">upload</span><span class="rv" style="font-size:11px">POST /drafts/upload {filename, content}</span></div>`;
   h    += `<div class="row"><span class="rk">commit</span><span class="rv" style="font-size:11px">POST /drafts/commit {message}</span></div>`;
-  h    += `<div class="row"><span class="rk">promote</span><span class="rv" style="font-size:11px">POST /drafts/promote</span></div>`;
-  h    += `</div></div>`;
+  h    += `<div class="row"><span class="rk">promote</span><span class="rv" style="font-size:11px">POST /drafts/promote</span></div></div></div>`;
   h    += `<hr class="divider"><div class="sec"><div class="sec-title">Your pass (AAP)</div>`;
   h    += `<div class="card"><div class="muted" style="margin-bottom:8px">Contributor pass.</div>`;
-  h    += `<div class="actions"><button class="btn btn-ghost" id="copyAAPBtn">&#128203; copy link</button></div></div>`;
-  h    += `</div>`;
+  h    += `<div class="actions"><button class="btn btn-ghost" id="copyAAPBtn">&#128203; copy link</button></div></div></div>`;
   ROOT.innerHTML = h;
   el('copyAAPBtn')?.addEventListener('click', () => {
     navigator.clipboard?.writeText(d.aap_url || location.href).then(() => toast('Copied'));
   });
 };
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Wizard view ────────────────────────────────────────────────────────────────
+// Accessible at /hub/webapp?mode=wizard[&token=...]
+
+const renderWizard = () => {
+  hideBack();
+  ROOT.innerHTML = `
+<div class="ey">HUB &middot; WIZARD</div>
+<h1>What do you want to build?</h1>
+<p class="lead">Describe it in plain language. Hub will generate a project plan and set everything up.</p>
+<hr class="divider">
+<div class="sec">
+  <div class="sec-title">Describe your project</div>
+  <textarea id="wizardPrompt" rows="5" placeholder="Example: A Telegram bot that sends daily crypto price updates to subscribers. Should use OpenRouter for AI summaries."></textarea>
+  <div class="actions">
+    <button class="btn btn-prim btn-full" id="wizardGenerateBtn">&#9889; Generate project plan</button>
+  </div>
+</div>
+<div id="wizardResult"></div>
+`;
+
+  el('wizardGenerateBtn')?.addEventListener('click', async () => {
+    const prompt = el('wizardPrompt')?.value.trim();
+    if (!prompt) { toast('Describe your project first'); return; }
+
+    const btn = el('wizardGenerateBtn');
+    btn.textContent = 'Thinking...';
+    btn.disabled = true;
+
+    try {
+      const r = await fetch(`${BASE}/hub/api/wizard/generate`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+        body:    JSON.stringify({ prompt }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        renderWizardResult(data.plan, prompt);
+      } else {
+        toast(`Failed: ${data.error}`);
+      }
+    } catch (e) {
+      toast(`Error: ${e.message}`);
+    } finally {
+      btn.textContent = '&#9889; Generate project plan';
+      btn.disabled = false;
+    }
+  });
+};
+
+const renderWizardResult = (plan, originalPrompt) => {
+  const res = el('wizardResult');
+  if (!res) return;
+
+  const needs = plan.needs || [];
+  const typeLabels = { bot: '&#129302; Telegram bot', site: '&#127760; Website', api: '&#128279; API service', mixed: '&#9889; Bot + Site' };
+  const typeLabel = typeLabels[plan.type] || plan.type;
+
+  let h = `<hr class="divider"><div class="sec"><div class="sec-title">Project plan</div>`;
+  h    += `<div class="card">`;
+  h    += `<div class="card-head">${typeLabel}</div>`;
+  h    += `<div class="row"><span class="rk">name</span><span class="rv"><code>${esc(plan.name)}</code></span></div>`;
+  h    += `<div class="row"><span class="rk">description</span><span class="rv">${esc(plan.description)}</span></div>`;
+  if (plan.stack) h += `<div class="row"><span class="rk">stack</span><span class="rv">${esc(plan.stack)}</span></div>`;
+  h    += `</div>`;
+
+  if (needs.length) {
+    h += `<div class="sec-title" style="margin-top:14px">What you'll need to connect</div>`;
+    h += `<div class="card">`;
+    const needLabels = {
+      bot_token:      '&#129302; Telegram Bot token — create one with @BotFather',
+      openrouter_key: '&#128279; OpenRouter API key — openrouter.ai/keys',
+      openai_key:     '&#129761; OpenAI API key — platform.openai.com',
+      anthropic_key:  '&#129302; Anthropic API key — console.anthropic.com',
+      webhook_url:    '&#127760; Webhook URL — your app endpoint',
+      domain:         '&#127760; Custom domain — optional',
+    };
+    for (const need of needs) {
+      const label = needLabels[need] || need;
+      h += `<div class="row" style="font-size:12px"><span style="color:#aaa">${label}</span></div>`;
+    }
+    h += `</div>`;
+  }
+
+  if (plan.description_long) {
+    h += `<div class="card" style="background:rgba(96,165,250,.05);border-color:rgba(96,165,250,.15)">`;
+    h += `<div style="font-size:13px;color:#aaa;line-height:1.6">${esc(plan.description_long)}</div>`;
+    h += `</div>`;
+  }
+
+  h += `<div class="actions" style="margin-top:4px">`;
+  h += `<button class="btn btn-prim btn-full" id="wizardCreateBtn">&#10003; Create <b>${esc(plan.name)}</b></button>`;
+  h += `</div>`;
+  if (needs.length) {
+    h += `<p class="muted" style="margin-top:8px">After creating the project, send the credentials listed above to Hub \u2014 one by one, as plain messages.</p>`;
+  }
+  h += `</div>`;
+
+  res.innerHTML = h;
+
+  el('wizardCreateBtn')?.addEventListener('click', async () => {
+    const btn = el('wizardCreateBtn');
+    btn.textContent = 'Creating...';
+    btn.disabled    = true;
+
+    try {
+      const sap = TOKEN; // wizard is always called with SAP or without token (server creates)
+      const r   = await fetch(`${BASE}/drafts/projects`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${sap}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name: plan.name, description: plan.description }),
+      });
+      const data = await r.json();
+      if (!data.ok) { toast(`Failed: ${data.error}`); return; }
+
+      // Save the plan prompt as a note in the project
+      const papToken  = data.pap_token || '';
+      const papSecret = papToken.replace(/^pap_/, '');
+      const sn        = new URLSearchParams(location.search).get('token')?.match(/^pass_(\d+)_/)?.[1] || '0';
+      const dashPass  = papSecret ? `pass_${sn}_project_${papSecret}` : null;
+      const dashUrl   = dashPass ? `${BASE}/hub/webapp?token=${encodeURIComponent(dashPass)}` : data.pap_activation_url;
+
+      // Show success
+      res.innerHTML = `
+<hr class="divider">
+<div class="sec">
+  <div class="card" style="border-color:rgba(74,222,128,.3)">
+    <div class="card-head"><span class="dot"></span>${esc(plan.name)} created.</div>
+    <div class="muted" style="margin-bottom:12px">Project is live. Now connect what you need:</div>
+    ${needs.map(n => {
+      const nl = { bot_token:'Bot token', openrouter_key:'OpenRouter key', openai_key:'OpenAI key', anthropic_key:'Anthropic key', webhook_url:'Webhook URL' };
+      return `<div class="row" style="font-size:12px"><span class="rk">${nl[n]||n}</span><span class="rv" style="color:#555">send to @LabsHubBot</span></div>`;
+    }).join('')}
+  </div>
+  <div class="actions">
+    ${dashPass ? `<button class="btn btn-prim btn-full" onclick="window.location.href='${dashUrl}'">&#9881; Open dashboard</button>` : ''}
+  </div>
+  <p class="muted" style="margin-top:10px">Send credentials as plain messages to @LabsHubBot. It will recognise and connect them automatically.</p>
+</div>`;
+    } catch (e) {
+      toast(`Error: ${e.message}`);
+    } finally {
+      btn.textContent = '\u2713 Create';
+      btn.disabled    = false;
+    }
+  });
+};
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
 
 const load = () => {
+  // Wizard mode — no token needed
+  if (MODE === 'wizard') { renderWizard(); return; }
+
   if (!TOKEN) {
     ROOT.innerHTML = `<div class="card"><div class="card-head">Open from Telegram</div><div class="muted">This dashboard works inside the Telegram app or via a direct link.</div></div>`;
     return;
