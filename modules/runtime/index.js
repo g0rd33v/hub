@@ -1,9 +1,9 @@
 // modules/runtime/index.js
-export { dispatchBotUpdate }  from './bots.js';
+export { dispatchBotUpdate } from './bots.js';
 export { tryDispatchHttp, hasRoutesJs, getRoutesStatus } from './routes.js';
 export { getRuntimeStatus, getLogs, clearLogs } from './sandbox.js';
 
-import * as bots   from './bots.js';
+import * as bots from './bots.js';
 import * as routes from './routes.js';
 
 export async function init(ctx) {
@@ -13,7 +13,6 @@ export async function init(ctx) {
 }
 
 export function mountRoutes(app, ctx) {
-  // Internal status endpoint — no auth needed (localhost only)
   app.get('/hub/runtime/status', (req, res) => {
     res.json({ ok: true, runtime: [] });
   });
