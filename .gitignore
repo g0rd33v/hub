@@ -3,12 +3,19 @@ node_modules/
 npm-debug.log*
 yarn-error.log*
 
-# Environment
+# Environment — never commit secrets
 .env
 .env.local
+*.env
 *.env.local
 
-# Backups (we keep .bak files only locally during patching, never in repo)
+# Secrets
+*.token
+*.sap
+*.tbp
+/etc/hub/
+
+# Backups
 *.bak
 *.bak.*
 
@@ -22,8 +29,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Drafts runtime data (lives on servers, not in hub)
+# Runtime data (lives on servers, not in repo)
 /var/lib/drafts/
+/var/lib/hub/
 /etc/labs/
 
 # Cert / TLS
