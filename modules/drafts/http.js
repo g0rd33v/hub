@@ -11,6 +11,7 @@ import simpleGit from 'simple-git';
 import {
   getState, saveState, findProjectByName, sanitizeName, isReservedName,
   projectPaths, ensureProjectDirs, switchToBranch, createProject, createAAP, now,
+  init as projectsInit,
 } from './projects.js';
 import {
   materializeVersion, promoteToLive, listVersions, githubSyncProject,
@@ -23,6 +24,7 @@ let _auth;
 
 export async function init(ctx) {
   _ctx = ctx;
+  await projectsInit(ctx);
 }
 
 function auth() {
@@ -378,7 +380,122 @@ export function mountRoutes(app, ctx) {
   app.get('/drafts/project/bot/logs', authPAPorSAP, (req, res) => { const p=projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'}); const limit=Math.max(1,Math.min(1000,parseInt(req.query.limit,10)||200)); const data=_ctx.modules.runtime?.getLogs(p.name,limit); res.json({ok:true,project:p.name,...(data||{lines:[],present:false})}); });
   app.delete('/drafts/project/bot/logs', authPAPorSAP, (req, res) => { const p=projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'}); _ctx.modules.runtime?.clearLogs(p.name); res.json({ok:true,cleared:true}); });
 
+
+  // Bot info (getMe)
+  app.get('/drafts/project/bot/info', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/getMe`);
+      const d = await r.json();
+      res.json({ok:true, project:p.name, bot: d.result || null, raw: d});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // Bot profile: set name, description, short description
+  app.post('/drafts/project/bot/profile', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    const { name, description, short_description } = req.body;
+    const base = `https://api.telegram.org/bot${p.bot.token}`;
+    const results = {};
+    if (name !== undefined) {
+      const r = await fetch(`${base}/setMyName`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:String(name).slice(0,64)})});
+      results.name = await r.json();
+    }
+    if (description !== undefined) {
+      const r = await fetch(`${base}/setMyDescription`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:String(description).slice(0,512)})});
+      results.description = await r.json();
+    }
+    if (short_description !== undefined) {
+      const r = await fetch(`${base}/setMyShortDescription`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({short_description:String(short_description).slice(0,120)})});
+      results.short_description = await r.json();
+    }
+    res.json({ok:true, project:p.name, results});
+  });
+
+  // Bot commands: get and set
+  app.get('/drafts/project/bot/commands', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/getMyCommands`);
+      const d = await r.json();
+      res.json({ok:true, project:p.name, commands: d.result || []});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  app.post('/drafts/project/bot/commands', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    const commands = req.body.commands;
+    if (!Array.isArray(commands)) return res.status(400).json({ok:false,error:'commands must be array'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/setMyCommands`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({commands: commands.slice(0,100).map(c=>({command:String(c.command||'').slice(1,32).toLowerCase().replace(/[^a-z0-9_]/g,''), description:String(c.description||'').slice(0,256)}))})
+      });
+      const d = await r.json();
+      res.json({ok:true, project:p.name, result:d});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // Webhook info
+  app.get('/drafts/project/bot/webhook', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/getWebhookInfo`);
+      const d = await r.json();
+      res.json({ok:true, project:p.name, webhook: d.result || null});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // Delete webhook (switch to polling)
+  app.delete('/drafts/project/bot/webhook', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/deleteWebhook`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({drop_pending_updates:false})
+      });
+      const d = await r.json();
+      p.bot.webhook_url = null; saveState();
+      res.json({ok:true, project:p.name, result:d});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+  // Direct message to specific user
+  app.post('/drafts/project/bot/send', authPAPorSAP, async (req, res) => {
+    if (!requireBot(req,res)) return;
+    const p = projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'});
+    const { chat_id, text, parse_mode } = req.body;
+    if (!chat_id || !text) return res.status(400).json({ok:false,error:'chat_id and text required'});
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${p.bot.token}/sendMessage`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({chat_id, text:String(text).slice(0,4096), parse_mode:parse_mode||'HTML', disable_web_page_preview:true})
+      });
+      const d = await r.json();
+      res.json({ok:d.ok, project:p.name, result:d.result||null, description:d.description||null});
+    } catch(e) { res.status(500).json({ok:false,error:e.message}); }
+  });
+
+
   // Routes.js status
   app.get('/drafts/project/routes', authPAPorSAP, (req, res) => { const p=projOf(req); if (!p) return res.status(400).json({ok:false,error:'no_project_context'}); res.json({ok:true,project:p.name,routes:_ctx.modules.runtime?.getRoutesStatus?.(p.name)||{present:false}}); });
 
+}
+
+// Re-export so ctx.modules.drafts.getState() etc work
+export { getState, saveState };
+export function findProjectByPAP(token) {
+  return getState().projects.find(p => p.pap && p.pap.token === token) || null;
+}
+export function findProjectAndAAPByAAPToken(token) {
+  for (const p of getState().projects) {
+    const a = (p.aaps||[]).find(a => a.token === token && !a.revoked);
+    if (a) return { project: p, aap: a };
+  }
+  return null;
 }
