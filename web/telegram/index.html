@@ -1,0 +1,425 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hub for Telegram · hub.labs.co/telegram</title>
+<meta name="description" content="Hub is a platform that runs your bots, sites and APIs from one dashboard. Full Telegram bot management — one token, total control.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#080808;color:#e8e8e8;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:#60a5fa;text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+nav{border-bottom:1px solid rgba(255,255,255,.06);padding:14px 0}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.04em;color:#888}
+.nav-links{display:flex;gap:20px;font-size:13px;color:#555}
+.nav-links a{color:#555}.nav-links a:hover{color:#e8e8e8;text-decoration:none}
+.nav-cta{background:#229ED9;color:#fff!important;padding:6px 14px;border-radius:7px;font-weight:600}
+.nav-cta:hover{opacity:.88}
+
+/* HERO */
+.hero{padding:72px 0 56px}
+.eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#555;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.dot-tg{width:7px;height:7px;border-radius:50%;background:#229ED9;box-shadow:0 0 14px rgba(34,158,217,.5)}
+h1{font-size:52px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-bottom:16px}
+.accent-tg{color:#229ED9}
+.lead{font-size:17px;color:#888;line-height:1.65;max-width:600px;margin-bottom:40px}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:12px 20px;border-radius:9px;text-decoration:none;transition:opacity .12s}
+.btn-primary{background:#229ED9;color:#fff}
+.btn-ghost{background:rgba(255,255,255,.06);color:#e8e8e8;border:1px solid rgba(255,255,255,.1)}
+.btn:hover{opacity:.85}
+
+/* DIVIDER */
+.divider{height:1px;background:rgba(255,255,255,.07);margin:56px 0}
+
+/* SECTION LABEL */
+.section-label{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#555;margin-bottom:24px}
+
+/* HUB OVERVIEW */
+h2{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+.section-lead{font-size:16px;color:#777;line-height:1.65;margin-bottom:36px;max-width:640px}
+
+/* PILLAR CARDS */
+.pillars{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
+.pillar{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:22px}
+.pillar-num{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#444;margin-bottom:10px}
+.pillar-title{font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:7px}
+.pillar-body{font-size:13px;color:#666;line-height:1.55}
+
+/* FEATURE LIST */
+.feature-list{display:grid;gap:0}
+.frow{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:20px 0;border-bottom:1px solid rgba(255,255,255,.05);align-items:start}
+.frow:last-child{border-bottom:none}
+.frow-left{}
+.frow-tag{font-family:ui-monospace,monospace;font-size:10px;background:rgba(34,158,217,.12);color:#60c8f0;padding:3px 8px;border-radius:3px;display:inline-block;margin-bottom:8px}
+.frow-title{font-size:14px;font-weight:700;color:#e8e8e8}
+.frow-right{font-size:13px;color:#666;line-height:1.6}
+.frow-right b{color:#aaa;font-weight:600}
+
+/* STEP LIST */
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.steps li:last-child{border-bottom:none}
+.steps li::before{content:counter(s,decimal-leading-zero);font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:#229ED9;padding-top:2px}
+.step-t{font-size:14px;font-weight:700;color:#e8e8e8;margin-bottom:4px}
+.step-d{font-size:13px;color:#666;line-height:1.55}
+
+/* API TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#444;text-align:left;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+tbody td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+.method{font-family:ui-monospace,monospace;font-size:11px;font-weight:700}
+.method-get{color:#4ade80}
+.method-post{color:#60a5fa}
+.method-put{color:#fbbf24}
+.method-del{color:#f87171}
+.endpoint{font-family:ui-monospace,monospace;font-size:12px;color:#aaa}
+.desc{color:#666}
+
+/* BEYOND BOX */
+.beyond{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:24px 28px}
+.beyond h3{font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:16px}
+.beyond-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px}
+.beyond-item{font-size:13px;color:#666;display:flex;gap:10px;padding:4px 0}
+.beyond-item::before{content:'\2014';color:#333;flex-shrink:0}
+
+/* FOOTER */
+footer{border-top:1px solid rgba(255,255,255,.06);padding:28px 0;margin-top:72px}
+.foot-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:ui-monospace,monospace;font-size:11px;color:#333;letter-spacing:.04em}
+.foot-inner a{color:#444}.foot-inner a:hover{color:#888;text-decoration:none}
+
+code{font-family:ui-monospace,monospace;font-size:12px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:3px;color:#bbb}
+
+@media(max-width:600px){
+  h1{font-size:36px}
+  .pillars{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr;gap:8px}
+  .beyond-grid{grid-template-columns:1fr}
+  .wrap{padding:0 18px}
+  .hero{padding:48px 0 40px}
+}
+</style>
+</head><body>
+
+<div class="wrap">
+<nav><div class="nav-inner">
+  <span class="logo">hub.labs.co</span>
+  <div class="nav-links">
+    <a href="#hub">Hub</a>
+    <a href="#telegram">Telegram</a>
+    <a href="#api">API</a>
+    <a href="/docs">Docs</a>
+    <a href="https://t.me/LabsHubBot" class="nav-cta">&#9992; @LabsHubBot</a>
+  </div>
+</div></nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow"><span class="dot-tg"></span> HUB &middot; TELEGRAM</div>
+  <h1>One token.<br><span class="accent-tg">Total control.</span></h1>
+  <p class="lead">Hub is a platform that runs your bots, sites and APIs from a single dashboard. Connect your Telegram bot once and manage everything &mdash; broadcast, commands, profile, webhook, analytics &mdash; without ever opening BotFather again.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://t.me/LabsHubBot" target="_blank">&#9992; Open @LabsHubBot</a>
+    <a class="btn btn-ghost" href="/docs">Full documentation &rarr;</a>
+  </div>
+</section>
+
+<div class="divider" id="hub"></div>
+
+<!-- PART 1: WHAT IS HUB -->
+<section>
+  <div class="section-label">Part 1 &mdash; Hub</div>
+  <h2>What Hub is</h2>
+  <p class="section-lead">Hub is a platform for running digital products &mdash; bots, sites, APIs &mdash; from a single place. You bring your credentials. Hub does the rest: hosting, versioning, dashboard, analytics, AI-powered build.</p>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="pillar-num">Platform</div>
+      <div class="pillar-title">Run anything from one place</div>
+      <div class="pillar-body">Telegram bots, static sites, API services, mini-apps. Every project gets a public URL, a private dashboard, a versioned file system, and analytics out of the box.</div>
+    </div>
+    <div class="pillar">
+      <div class="pillar-num">Build</div>
+      <div class="pillar-title">AI builds the project for you</div>
+      <div class="pillar-body">Describe what you want. Hub generates a build prompt, drops it at your project URL. Open it in Claude for Chrome &mdash; Claude reads it and ships the finished project automatically.</div>
+    </div>
+    <div class="pillar">
+      <div class="pillar-num">Access</div>
+      <div class="pillar-title">Three-tier access model</div>
+      <div class="pillar-body">SAP (server owner), PAP (project owner), AAP (contributor). Each tier gets a pass link. Paste it in Claude for Chrome and the right dashboard opens instantly.</div>
+    </div>
+    <div class="pillar">
+      <div class="pillar-num">Storage</div>
+      <div class="pillar-title">Git-versioned file hosting</div>
+      <div class="pillar-body">Every file upload is a commit. Roll back to any version. Promote from draft to live in one step. Optional GitHub mirror for public repos.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PART 1B: HUB PLATFORM FEATURES -->
+<section>
+  <div class="section-label">Hub features</div>
+  <h2>What Hub does</h2>
+  <p class="section-lead">Every project created on Hub gets the full stack automatically. No setup required.</p>
+
+  <div class="feature-list">
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Hosting</div>
+        <div class="frow-title">Project pages</div>
+      </div>
+      <div class="frow-right">Every project gets a public URL at <code>hub.labs.co/{name}/</code>. Static HTML, CSS, JS, media assets. Content is served from the <code>live/</code> branch. Visitors see a welcome page by default, or your deployed app once Claude builds it.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Versioning</div>
+        <div class="frow-title">Git history &amp; rollback</div>
+      </div>
+      <div class="frow-right">Every upload creates a commit. Every commit is addressable at <code>/{name}/v/{N}/</code>. Promote any version to live with one API call. Full history visible in the PAP dashboard. Optional GitHub auto-sync on every commit.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Dashboard</div>
+        <div class="frow-title">PAP &mdash; project dashboard</div>
+      </div>
+      <div class="frow-right">The project owner dashboard. Reachable by pass link or from @LabsHubBot. Shows bot status, subscriber count, broadcast UI, command editor, bot profile editor, webhook status, audience analytics, runtime logs, file versions, GitHub sync controls.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Collaboration</div>
+        <div class="frow-title">AAP &mdash; contributor access</div>
+      </div>
+      <div class="frow-right">The project owner can generate AAP links for collaborators. Each AAP gets an isolated branch <code>aap/{id}/</code>. Contributors upload and commit freely. The PAP owner merges and promotes to live. No credentials shared.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">AI Build</div>
+        <div class="frow-title">Wizard &amp; prompt seeding</div>
+      </div>
+      <div class="frow-right">The Hub Wizard (<code>hub.labs.co/hub/wizard</code>) opens inside Telegram as a Mini App. Answer 15 Yes/No/Skip questions about your project. Hub generates a structured build prompt and seeds it as <code>prompt.md</code> at your live URL. Open that URL in Claude for Chrome &mdash; Claude reads it and builds the project end-to-end.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Buffer</div>
+        <div class="frow-title">Personal cross-device buffer</div>
+      </div>
+      <div class="frow-right">Every message you send to @LabsHubBot (that isn&rsquo;t a command) is auto-saved to your personal buffer. Server-side SQLite keyed by Telegram ID. Access from any device at <code>hub.labs.co/hub/buffer?tg={id}</code>. Search, copy link, clear. JSON feed available for use in projects.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Smart intake</div>
+        <div class="frow-title">Universal message router</div>
+      </div>
+      <div class="frow-right">Send anything to @LabsHubBot and it figures out what to do. Bot token &rarr; link &amp; create project. API key &rarr; save to server config. URL &rarr; set as webhook. Project name &rarr; create project. Description sentence &rarr; generate plan via LLM. Wizard JSON &rarr; full project creation with prompt seeding.</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider" id="telegram"></div>
+
+<!-- PART 2: TELEGRAM FEATURES -->
+<section>
+  <div class="section-label">Part 2 &mdash; Telegram</div>
+  <h2>What Hub does with your Telegram bot</h2>
+  <p class="section-lead">Send one token to @LabsHubBot. That is the only time you touch BotFather. Every feature below is available from the dashboard from that moment on.</p>
+
+  <div class="feature-list">
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Setup</div>
+        <div class="frow-title">Link &amp; validate</div>
+      </div>
+      <div class="frow-right">Send your bot token to @LabsHubBot. Hub calls <code>getMe</code> to validate it, stores the token securely, creates your project, and returns a PAP dashboard link. The bot is immediately live in polling mode. No webhooks to configure, no servers to provision.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Messaging</div>
+        <div class="frow-title">Broadcast to all subscribers</div>
+      </div>
+      <div class="frow-right">Send a message to <b>every subscriber at once</b> from the dashboard. HTML formatting supported (<code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code>, links). After sending, shows delivered count and skipped count. Available in polling mode only.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Messaging</div>
+        <div class="frow-title">Send to specific user</div>
+      </div>
+      <div class="frow-right">Enter any <b>Chat ID or @username</b> and compose a message directly from the dashboard. No code. Useful for support replies, targeted notifications, testing. HTML formatting supported. Confirmation shows delivery status.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Commands</div>
+        <div class="frow-title">Edit bot command menu</div>
+      </div>
+      <div class="frow-right">Your bot&rsquo;s command list is <b>loaded live from Telegram</b> when you open the dashboard. Edit inline: change command names, update descriptions, add new rows, delete existing ones. One click saves back to Telegram via <code>setMyCommands</code>. No BotFather needed.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Profile</div>
+        <div class="frow-title">Edit bot profile</div>
+      </div>
+      <div class="frow-right">Three fields, editable from the dashboard:
+        <br><b>Display name</b> &mdash; what users see as the bot&rsquo;s name (up to 64 chars, <code>setMyName</code>)
+        <br><b>Short description</b> &mdash; shown in Telegram search results (up to 120 chars, <code>setMyShortDescription</code>)
+        <br><b>About text</b> &mdash; shown on the bot&rsquo;s profile page (up to 512 chars, <code>setMyDescription</code>)
+        <br>All three save in one click. Current bot name prefills the placeholder automatically.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Webhook</div>
+        <div class="frow-title">Webhook management</div>
+      </div>
+      <div class="frow-right">Full webhook visibility and control from the dashboard:
+        <br>&bull; <b>Live status</b> from <code>getWebhookInfo</code> &mdash; current URL, pending update count, last error message
+        <br>&bull; <b>Set webhook</b> &mdash; paste a URL, click &ldquo;enable webhook&rdquo;
+        <br>&bull; <b>Delete webhook</b> &mdash; one click, switches back to polling mode immediately
+        <br>Polling &harr; webhook switch requires zero server restarts.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Subscribers</div>
+        <div class="frow-title">Subscriber tracking</div>
+      </div>
+      <div class="frow-right">/start in your bot adds the user as a subscriber. /stop removes them. The subscriber count shows live in the dashboard header. Used by broadcast to determine recipient list and skip count.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Analytics</div>
+        <div class="frow-title">Audience analytics</div>
+      </div>
+      <div class="frow-right">Automatically collected, no setup needed:
+        <br>&bull; <b>Users</b> &mdash; unique user count
+        <br>&bull; <b>Events</b> &mdash; total interaction count
+        <br>&bull; <b>DAU 7d / DAU 30d</b> &mdash; daily active users over last 7 and 30 days
+        <br>&bull; <b>Languages</b> &mdash; user language distribution with progress bars
+        <br>&bull; <b>Countries</b> &mdash; user country distribution with progress bars
+        <br>&bull; <b>Peak hours</b> &mdash; heatmap of activity by hour of day (UTC)
+        <br>&bull; <b>Day of week</b> &mdash; activity distribution by weekday
+        <br>&bull; <b>Command usage</b> &mdash; ranked table of which commands users call most</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Logs</div>
+        <div class="frow-title">Runtime logs</div>
+      </div>
+      <div class="frow-right">View recent bot activity directly in the dashboard. Useful for debugging message handling and confirming deliveries. One-click clear. No SSH access needed.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Info</div>
+        <div class="frow-title">Live bot info</div>
+      </div>
+      <div class="frow-right">Refresh button in the profile section calls <code>getMe</code> live from Telegram and shows a toast with the current username, display name, and bot status. Confirms the token is still valid.</div>
+    </div>
+
+    <div class="frow">
+      <div class="frow-left">
+        <div class="frow-tag">Unlink</div>
+        <div class="frow-title">Detach the bot</div>
+      </div>
+      <div class="frow-right">Remove the bot token from the project at any time. The project stays intact &mdash; files, versions, analytics history all remain. You can link a different token to the same project, or leave it as a pure hosting project.</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW TO START -->
+<section>
+  <div class="section-label">Getting started</div>
+  <h2>Five steps to a live project</h2>
+  <p class="section-lead">From zero to a running bot with a dashboard, analytics, and a public page.</p>
+  <ol class="steps">
+    <li><div><div class="step-t">Create a bot in @BotFather</div><div class="step-d">Open Telegram &rarr; @BotFather &rarr; /newbot. Pick a name and a username ending in <code>bot</code>. Copy the token it gives you.</div></div></li>
+    <li><div><div class="step-t">Send the token to @LabsHubBot</div><div class="step-d">Paste the token directly into the chat. Hub validates it with Telegram, creates your project instantly, and links the bot.</div></div></li>
+    <li><div><div class="step-t">Get your dashboard link (PAP)</div><div class="step-d">Hub replies with two buttons: Open (your public project page) and Dashboard (your private PAP link). Bookmark the dashboard link &mdash; it&rsquo;s your control panel forever.</div></div></li>
+    <li><div><div class="step-t">Build with Claude (optional)</div><div class="step-d">Drop the project URL into Claude for Chrome. Claude reads the <code>prompt.md</code> that Hub seeded at your project URL and builds the full project &mdash; HTML, logic, bot commands &mdash; then uploads, commits, and promotes it to live automatically.</div></div></li>
+    <li><div><div class="step-t">Manage from the dashboard</div><div class="step-d">Broadcast, edit commands, update your bot&rsquo;s name and description, switch to webhook mode, view analytics &mdash; all from the web, all without touching BotFather or writing code.</div></div></li>
+  </ol>
+</section>
+
+<div class="divider" id="api"></div>
+
+<!-- API TABLE -->
+<section>
+  <div class="section-label">API reference</div>
+  <h2>Bot management endpoints</h2>
+  <p class="section-lead">All endpoints require PAP or SAP Bearer token. Callable by humans, agents, or any HTTP client.</p>
+  <table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method method-get">GET</span></td><td class="endpoint">/drafts/project/bot</td><td class="desc">Bot status: attached, username, mode (polling/webhook)</td></tr>
+      <tr><td><span class="method method-put">PUT</span></td><td class="endpoint">/drafts/project/bot</td><td class="desc">Link a bot token to this project</td></tr>
+      <tr><td><span class="method method-del">DEL</span></td><td class="endpoint">/drafts/project/bot</td><td class="desc">Unlink the bot token</td></tr>
+      <tr><td><span class="method method-get">GET</span></td><td class="endpoint">/drafts/project/bot/info</td><td class="desc">Live getMe from Telegram &mdash; name, username, bot flags</td></tr>
+      <tr><td><span class="method method-post">POST</span></td><td class="endpoint">/drafts/project/bot/profile</td><td class="desc">Set name, short description, about text</td></tr>
+      <tr><td><span class="method method-get">GET</span></td><td class="endpoint">/drafts/project/bot/commands</td><td class="desc">Get current command list from Telegram</td></tr>
+      <tr><td><span class="method method-post">POST</span></td><td class="endpoint">/drafts/project/bot/commands</td><td class="desc">Set command list &mdash; replaces all existing commands</td></tr>
+      <tr><td><span class="method method-get">GET</span></td><td class="endpoint">/drafts/project/bot/webhook</td><td class="desc">Live getWebhookInfo &mdash; URL, pending count, last error</td></tr>
+      <tr><td><span class="method method-put">PUT</span></td><td class="endpoint">/drafts/project/bot/webhook</td><td class="desc">Set webhook URL</td></tr>
+      <tr><td><span class="method method-del">DEL</span></td><td class="endpoint">/drafts/project/bot/webhook</td><td class="desc">Delete webhook, switch to polling</td></tr>
+      <tr><td><span class="method method-post">POST</span></td><td class="endpoint">/drafts/project/bot/broadcast</td><td class="desc">Send HTML message to all subscribers</td></tr>
+      <tr><td><span class="method method-post">POST</span></td><td class="endpoint">/drafts/project/bot/send</td><td class="desc">Send message to specific chat_id or @username</td></tr>
+      <tr><td><span class="method method-get">GET</span></td><td class="endpoint">/drafts/project/bot/logs</td><td class="desc">Recent runtime log lines</td></tr>
+      <tr><td><span class="method method-del">DEL</span></td><td class="endpoint">/drafts/project/bot/logs</td><td class="desc">Clear runtime logs</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- BEYOND -->
+<section>
+  <div class="beyond">
+    <h3>Beyond the bot: everything else Hub gives you</h3>
+    <div class="beyond-grid">
+      <div class="beyond-item">Public project page at <code>hub.labs.co/{name}/</code></div>
+      <div class="beyond-item">Git versioning &mdash; every upload is a commit</div>
+      <div class="beyond-item">Rollback to any previous version</div>
+      <div class="beyond-item">GitHub mirror &mdash; auto-sync on every commit</div>
+      <div class="beyond-item">Claude for Chrome builds the project automatically</div>
+      <div class="beyond-item">AAP contributor links &mdash; team members without credentials</div>
+      <div class="beyond-item">Personal buffer &mdash; cross-device note sync via Telegram</div>
+      <div class="beyond-item">Wizard Mini App &mdash; scaffold projects from inside Telegram</div>
+      <div class="beyond-item">SAP server dashboard &mdash; all projects in one view</div>
+      <div class="beyond-item">How-to-use instruction on every project link</div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="foot-inner">
+  <span>hub.labs.co/telegram</span>
+  <span>
+    <a href="/">hub.labs.co</a> &nbsp;&middot;&nbsp;
+    <a href="/docs">docs</a> &nbsp;&middot;&nbsp;
+    <a href="/telegram">telegram</a> &nbsp;&middot;&nbsp;
+    <a href="https://t.me/LabsHubBot">@LabsHubBot</a>
+  </span>
+</div></footer>
+
+</div><!-- /wrap -->
+</body></html>
