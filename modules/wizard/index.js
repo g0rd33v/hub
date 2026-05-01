@@ -94,6 +94,13 @@ const renderWizardHTML = () => `<!doctype html><html lang="en"><head>
   .gen .spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.15);border-top-color:#ff6a3d;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .hidden{display:none!important}
+  /* Coming Soon card */
+  .coming-soon{border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:24px;background:rgba(255,255,255,.015);margin-top:8px;display:flex;gap:18px;align-items:flex-start}
+  .cs-icon{font-size:28px;flex-shrink:0;margin-top:2px;opacity:.7}
+  .cs-badge{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,106,61,.4);color:#ff9b7a;margin-bottom:9px}
+  .cs-title{font-size:15px;font-weight:700;color:#ccc;margin-bottom:6px}
+  .cs-body{font-size:13px;color:#555;line-height:1.6}
+  .cs-body b{color:#777;font-weight:600}
   .foot{margin-top:48px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);color:#555;font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
   @media(max-width:560px){
     .wrap{padding:36px 18px 80px}
@@ -101,6 +108,7 @@ const renderWizardHTML = () => `<!doctype html><html lang="en"><head>
     .qtext{font-size:20px}
     .answers{grid-template-columns:1fr 1fr;gap:8px}
     .qcard{padding:20px;min-height:0}
+    .coming-soon{flex-direction:column;gap:10px}
   }
   ::selection{background:rgba(255,106,61,.35);color:#fff}
 </style>
@@ -249,6 +257,26 @@ const renderWizardHTML = () => `<!doctype html><html lang="en"><head>
     <button class="ghost" id="clear-hist">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Clear
     </button>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- COMING SOON: ANALYZE PRODUCT -->
+  <h2>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Coming soon
+  </h2>
+
+  <div class="coming-soon">
+    <div class="cs-icon">&#128269;</div>
+    <div>
+      <div class="cs-badge">coming soon</div>
+      <div class="cs-title">Analyze Product</div>
+      <div class="cs-body">
+        Drop a <b>URL or product name</b> and Claude goes and studies it &mdash; reads the landing page, docs, positioning, feature set. Then generates a complete framework for it automatically: name, description, architecture, prompt, full documentation scaffold.<br><br>
+        Everything ready to copy into your own project or use as a starting point. No questions, no wizard &mdash; just paste the link, get the full picture.
+      </div>
+    </div>
   </div>
 
   <div class="foot">

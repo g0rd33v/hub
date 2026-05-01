@@ -165,20 +165,20 @@ ${plan.description_long || plan.description}
 
 ## Deliverables
 
-- A self-contained `index.html` (or minimal file set) that implements the full project.
+- A self-contained index.html (or minimal file set) that implements the full project.
 - All UI, logic, and content in place — no placeholders, no TODOs.
-- If a Telegram bot is needed: create `bot.json` at project root with commands and /start WebApp button.
-- A brief `README.md` with the one-liner and live URL.
+- If a Telegram bot is needed: create bot.json at project root with commands and /start WebApp button.
+- A brief README.md with the one-liner and live URL.
 
 ## Deployment
 
 Use the Drafts protocol on this project URL: **${liveUrl}**
 
-1. `POST ${base}/drafts/upload` \u2014 upload each file: `{ filename, content }` with PAP token as Bearer
-2. `POST ${base}/drafts/commit` \u2014 commit: `{ message: "initial build" }`
-3. `POST ${base}/drafts/promote` \u2014 promote to live
+1. POST \${base}/drafts/upload \u2014 upload each file: { filename, content } with PAP token as Bearer
+2. POST \${base}/drafts/commit \u2014 commit: { message: 'initial build' }
+3. POST \${base}/drafts/promote \u2014 promote to live
 
-PAP pass (use as Bearer token): `${papPassUrl.split('token=')[1] || ''}`
+PAP pass (use as Bearer token): extract the 'token' query parameter from the project dashboard URL
 
 The final answer must include the live URL where the project is reachable.
 
@@ -317,11 +317,11 @@ async function handleBuffer(token, chatId, args) {
     return `${i + 1}. <i>${timeAgo(e.ts)}</i>\n${escHtml(preview)}`;
   }).join('\n\n');
   const moreText = total > 5 ? `\n\n<i>+${total - 5} more. Full feed below.</i>` : '';
+  const waUrl2 = `${base}/hub/buffer?tg=${userId}`;
   return send(token, chatId,
     `<b>Buffer</b> \u2014 ${total} item${total !== 1 ? 's' : ''}\n\n${lines}${moreText}`,
     { reply_markup: kbd([
-        [{ text: '\u{1F517} Buffer feed (JSON)', url: feedUrl }],
-        [{ text: '\u{1F5D1} Clear buffer', callback_data: 'buffer_clear' }],
+        [{ text: '\u{1F4CB} Open Buffer', web_app: { url: waUrl2 } }],
     ]) }
   );
 }

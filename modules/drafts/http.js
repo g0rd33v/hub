@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import simpleGit from 'simple-git';
 
 import {
-  getState, saveState, findProjectByName, sanitizeName, isReservedName,
+  getState as _getState, saveState as _saveState, findProjectByName, sanitizeName, isReservedName,
   projectPaths, ensureProjectDirs, switchToBranch, createProject, createAAP, now,
   init as projectsInit,
 } from './projects.js';
@@ -488,7 +488,8 @@ export function mountRoutes(app, ctx) {
 }
 
 // Re-export so ctx.modules.drafts.getState() etc work
-export { getState, saveState };
+export function getState() { return _getState(); }
+export function saveState() { return _saveState(); }
 export function findProjectByPAP(token) {
   return getState().projects.find(p => p.pap && p.pap.token === token) || null;
 }

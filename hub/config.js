@@ -15,7 +15,7 @@ export const config = {
     buffer: true,
     telegram: true,
     analytics: true,
-    wizard: false,
+    wizard: true,
   },
 };
 

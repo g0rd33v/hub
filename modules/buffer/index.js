@@ -195,7 +195,16 @@ function renderBufferHtml(tgId, base) {
   <div class="divider"></div>
   <div id="entries"><div class="empty"><span class="spinner"></span></div></div>
   <div class="feed-url" id="feedUrl"></div>
-</div>
+
+<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;margin:24px 0 0;font-size:13px">
+  <div style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:10px">How to use this link</div>
+  <div style="display:flex;flex-direction:column;gap:0">
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#ff6a3d;min-width:20px">01</span><span style="color:#888">Open Chrome</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#ff6a3d;min-width:20px">02</span><span style="color:#888">Launch the Claude for Chrome extension</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#ff6a3d;min-width:20px">03</span><span style="color:#888">Drop this link into the chat</span></div>
+  </div>
+  <div style="margin-top:10px;color:#555;font-size:12px">Claude will take it from there.</div>
+</div></div>
 <footer>buffer &middot; hub.labs.co &middot; stored server-side by Telegram ID</footer>
 <div id="toast"></div>
 <script>

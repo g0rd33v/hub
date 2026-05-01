@@ -1,0 +1,313 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hub for Telegram &middot; hub.labs.co</title>
+<meta name="description" content="Get a bot token from BotFather once. Then manage everything — broadcasts, commands, profile, analytics — from one dashboard. No code.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#080808;color:#e8e8e8;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:#60a5fa;text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:720px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+nav{border-bottom:1px solid rgba(255,255,255,.06);padding:14px 0}
+.nav-i{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-family:ui-monospace,monospace;font-size:13px;color:#555;letter-spacing:.04em}
+.nav-links{display:flex;gap:18px;font-size:13px}
+.nav-links a{color:#444}.nav-links a:hover{color:#e8e8e8;text-decoration:none}
+.nav-cta{background:#229ED9;color:#fff!important;padding:6px 14px;border-radius:7px;font-weight:600;white-space:nowrap}
+.nav-cta:hover{opacity:.85}
+
+/* HERO */
+.hero{padding:80px 0 64px}
+.eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#444;margin-bottom:22px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#229ED9;box-shadow:0 0 16px rgba(34,158,217,.55)}
+h1{font-size:54px;font-weight:800;letter-spacing:-.03em;line-height:1.04;margin-bottom:20px}
+.hl{color:#229ED9}
+.hero-lead{font-size:18px;color:#777;line-height:1.65;max-width:580px;margin-bottom:36px}
+.hero-lead strong{color:#aaa;font-weight:600}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:13px 22px;border-radius:9px;text-decoration:none;transition:opacity .12s}
+.btn-p{background:#229ED9;color:#fff}
+.btn-g{background:rgba(255,255,255,.05);color:#ccc;border:1px solid rgba(255,255,255,.1)}
+.btn:hover{opacity:.82}
+
+/* DIVIDER */
+.div{height:1px;background:rgba(255,255,255,.07);margin:60px 0}
+
+/* WHAT YOU GET */
+h2{font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.12;margin-bottom:10px}
+.sh{font-size:16px;color:#666;line-height:1.6;margin-bottom:40px;max-width:560px}
+.sl{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:22px}
+
+/* SCENARIO CARDS */
+.scenarios{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.sc{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:22px 20px;transition:border-color .15s}
+.sc:hover{border-color:rgba(34,158,217,.3)}
+.sc-icon{font-size:26px;margin-bottom:12px}
+.sc-title{font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:7px}
+.sc-body{font-size:13px;color:#666;line-height:1.55}
+
+/* HOW IT WORKS */
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:32px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid rgba(255,255,255,.05);align-items:start}
+.steps li:last-child{border-bottom:none}
+.steps li::before{content:counter(s);font-family:ui-monospace,monospace;font-size:13px;font-weight:800;color:#229ED9;padding-top:1px}
+.st{font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:5px}
+.sd{font-size:13px;color:#666;line-height:1.55}
+.sd code{font-family:ui-monospace,monospace;font-size:12px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:3px;color:#aaa}
+
+/* FEATURES TABLE */
+.ftable{width:100%;border-collapse:collapse}
+.ftable tr{border-bottom:1px solid rgba(255,255,255,.05)}
+.ftable tr:last-child{border-bottom:none}
+.ftable tr:hover td{background:rgba(255,255,255,.015)}
+.ftable td{padding:14px 0;vertical-align:top}
+.ftable td:first-child{width:44px;padding-right:12px}
+.ftable td:nth-child(2){width:180px;padding-right:20px}
+.ficon{font-size:18px;opacity:.8}
+.fname{font-size:14px;font-weight:700;color:#ccc}
+.fdesc{font-size:13px;color:#666;line-height:1.55}
+.fdesc b{color:#aaa;font-weight:600}
+code{font-family:ui-monospace,monospace;font-size:12px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:3px;color:#aaa}
+
+/* EXTRAS */
+.extras{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.ex{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:14px 16px}
+.ex-title{font-size:13px;font-weight:700;color:#bbb;margin-bottom:4px}
+.ex-body{font-size:12px;color:#555;line-height:1.5}
+
+/* FOOTER */
+footer{border-top:1px solid rgba(255,255,255,.06);padding:28px 0;margin-top:72px}
+.fi{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-family:ui-monospace,monospace;font-size:11px;color:#333;letter-spacing:.04em}
+.fi a{color:#444}.fi a:hover{color:#888;text-decoration:none}
+
+@media(max-width:600px){
+  h1{font-size:36px}
+  .scenarios{grid-template-columns:1fr}
+  .extras{grid-template-columns:1fr 1fr}
+  .wrap{padding:0 18px}
+  .hero{padding:52px 0 44px}
+  .ftable td:nth-child(2){width:130px;padding-right:12px}
+}
+</style>
+</head><body>
+<div class="wrap">
+
+<nav><div class="nav-i">
+  <span class="logo">hub.labs.co</span>
+  <div class="nav-links">
+    <a href="#what">What you get</a>
+    <a href="#how">How it works</a>
+    <a href="#features">All features</a>
+    <a href="https://t.me/LabsHubBot" class="nav-cta">&#9992; @LabsHubBot</a>
+  </div>
+</div></nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow"><span class="dot"></span> HUB &middot; TELEGRAM</div>
+  <h1>Your Telegram bot.<br><span class="hl">Run by Hub.</span></h1>
+  <p class="hero-lead">Get a token from BotFather <strong>once.</strong> That's the last time you need it. Hub takes care of everything else — your bot's logic, its audience, its commands, its profile — all from a simple dashboard. No servers. No code. No BotFather.</p>
+  <div class="cta-row">
+    <a class="btn btn-p" href="https://t.me/LabsHubBot" target="_blank">&#9992; Start with @LabsHubBot</a>
+    <a class="btn btn-g" href="/docs">Documentation &rarr;</a>
+  </div>
+</section>
+
+<div class="div" id="what"></div>
+
+<!-- WHAT YOU GET -->
+<section>
+  <div class="sl">What you get</div>
+  <h2>One token.<br>A lot of possibilities.</h2>
+  <p class="sh">Send your bot token to @LabsHubBot and instantly unlock everything below. No setup. No configuration. It just works.</p>
+
+  <div class="scenarios">
+    <div class="sc">
+      <div class="sc-icon">&#128226;</div>
+      <div class="sc-title">Broadcast to your audience</div>
+      <div class="sc-body">Send a message to all your subscribers at once — announcements, updates, offers. Pick who gets it, write the text, hit send. Done.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#9998;</div>
+      <div class="sc-title">Set up your bot's commands</div>
+      <div class="sc-body">Edit the command menu your users see when they type /. Add new commands, rename them, remove old ones — right in the dashboard, no BotFather.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#128100;</div>
+      <div class="sc-title">Change your bot's name &amp; description</div>
+      <div class="sc-body">Update how your bot looks to the world — its display name, the short text in search results, and its profile description. All in one place.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#128202;</div>
+      <div class="sc-title">See who's using your bot</div>
+      <div class="sc-body">Real audience data: how many users, which countries, what languages, when they're most active, which commands they use. All automatic.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#128172;</div>
+      <div class="sc-title">Message any user directly</div>
+      <div class="sc-body">Need to reply to someone, send a test, or push a personal notification? Enter their Chat ID and write the message. Delivered instantly.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#128279;</div>
+      <div class="sc-title">Connect your bot to any backend</div>
+      <div class="sc-body">When you're ready to add logic, point your bot to any URL via webhook. Switch between polling and webhook mode in one click — no restarts.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#9965;</div>
+      <div class="sc-title">Let AI build the bot for you</div>
+      <div class="sc-body">Describe what you want in the Wizard. Hub creates a build prompt. Open it in Claude for Chrome — Claude ships the finished bot automatically.</div>
+    </div>
+    <div class="sc">
+      <div class="sc-icon">&#128203;</div>
+      <div class="sc-title">Your own public page</div>
+      <div class="sc-body">Every bot gets a public link at <code>hub.labs.co/yourbot/</code> — a page you can share with anyone. It shows your bot and how to open it in Telegram.</div>
+    </div>
+  </div>
+</section>
+
+<div class="div" id="how"></div>
+
+<!-- HOW IT WORKS -->
+<section>
+  <div class="sl">How it works</div>
+  <h2>Three steps to get started.</h2>
+  <p class="sh">It takes about two minutes from zero to a running bot with a dashboard.</p>
+  <ol class="steps">
+    <li>
+      <div></div>
+      <div>
+        <div class="st">Get a token from @BotFather</div>
+        <div class="sd">Open Telegram, find @BotFather, send <code>/newbot</code>. Give your bot a name and a username ending in <code>bot</code>. BotFather gives you a token — copy it. That's the only time you need BotFather.</div>
+      </div>
+    </li>
+    <li>
+      <div></div>
+      <div>
+        <div class="st">Send the token to @LabsHubBot</div>
+        <div class="sd">Open @LabsHubBot in Telegram and paste the token into the chat. Hub validates it, creates your project, and links the bot — in seconds. Hub replies with your dashboard link.</div>
+      </div>
+    </li>
+    <li>
+      <div></div>
+      <div>
+        <div class="st">Manage everything from the dashboard</div>
+        <div class="sd">Bookmark your dashboard link. That's your control panel. Broadcast, edit commands, update your bot's profile, view analytics — all from the web, forever. No code, no servers, no BotFather.</div>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<div class="div" id="features"></div>
+
+<!-- ALL FEATURES -->
+<section>
+  <div class="sl">All features</div>
+  <h2>Everything Hub does<br>with your bot.</h2>
+  <p class="sh">A complete list of what you can manage from the dashboard after connecting your token.</p>
+
+  <table class="ftable">
+    <tbody>
+      <tr>
+        <td><div class="ficon">&#128226;</div></td>
+        <td><div class="fname">Broadcast</div></td>
+        <td class="fdesc">Send one message to <b>all your subscribers at once</b>. Supports HTML formatting — bold, italic, links, code. Shows how many messages were delivered and how many were skipped after sending.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128172;</div></td>
+        <td><div class="fname">Send to user</div></td>
+        <td class="fdesc">Send a direct message to <b>any specific person</b> by their Chat ID or @username. Useful for support, personal notifications, and testing your bot's responses.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#9998;</div></td>
+        <td><div class="fname">Command editor</div></td>
+        <td class="fdesc">Your bot's <b>command menu loads live from Telegram</b> when you open the dashboard. Edit command names and descriptions inline, add new ones, delete old ones. One click saves everything back to Telegram.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128100;</div></td>
+        <td><div class="fname">Bot profile</div></td>
+        <td class="fdesc">Edit three things without touching BotFather: <b>display name</b> (what users see in chat), <b>short description</b> (shown in Telegram search), and <b>about text</b> (shown on the bot's profile page). All save in one click.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128279;</div></td>
+        <td><div class="fname">Webhook control</div></td>
+        <td class="fdesc">See your webhook's <b>live status</b> — current URL, number of pending updates, last error message. Set a new webhook URL, or delete it and switch back to polling mode. One click, zero restarts.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128101;</div></td>
+        <td><div class="fname">Subscribers</div></td>
+        <td class="fdesc">When users send <code>/start</code> to your bot, they're added as subscribers. <code>/stop</code> removes them. The live count shows in the dashboard. Broadcast uses this list to reach everyone.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128202;</div></td>
+        <td><div class="fname">Audience analytics</div></td>
+        <td class="fdesc">Collected automatically, no setup needed. Shows <b>total users, events, DAU</b> (7-day and 30-day), <b>languages and countries</b> with visual bars, a <b>peak hours heatmap</b>, activity by day of week, and a <b>command usage ranking</b> — which commands your users actually call.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128203;</div></td>
+        <td><div class="fname">Runtime logs</div></td>
+        <td class="fdesc">See recent bot activity in the dashboard. Useful when something isn't working — no SSH, no server access needed. Clear logs in one click.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128270;</div></td>
+        <td><div class="fname">Live bot info</div></td>
+        <td class="fdesc">Hit refresh to pull your bot's current data from Telegram — username, display name, status. Confirms the token is still valid and the bot is alive.</td>
+      </tr>
+      <tr>
+        <td><div class="ficon">&#128115;</div></td>
+        <td><div class="fname">Public project page</div></td>
+        <td class="fdesc">Your bot gets a permanent public URL at <code>hub.labs.co/yourbot/</code>. Share it with anyone. The page shows the bot's name, a button to open it in Telegram, and instructions for working with the link in Claude.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="div"></div>
+
+<!-- EXTRAS -->
+<section>
+  <div class="sl">Also included</div>
+  <h2>More from Hub.</h2>
+  <p class="sh">Beyond the bot management, every Hub project comes with these out of the box.</p>
+
+  <div class="extras">
+    <div class="ex">
+      <div class="ex-title">AI build</div>
+      <div class="ex-body">Describe what you want in the Wizard. Hub generates a build prompt. Open it in Claude for Chrome — Claude ships the project automatically.</div>
+    </div>
+    <div class="ex">
+      <div class="ex-title">File versioning</div>
+      <div class="ex-body">Every file upload creates a commit. Roll back to any version with one click. Full history in the dashboard.</div>
+    </div>
+    <div class="ex">
+      <div class="ex-title">GitHub sync</div>
+      <div class="ex-body">Auto-mirror your project to a GitHub repo on every commit. One toggle in the dashboard.</div>
+    </div>
+    <div class="ex">
+      <div class="ex-title">Contributor access</div>
+      <div class="ex-body">Share a contributor link (AAP) with teammates. They can upload and edit files without seeing your credentials.</div>
+    </div>
+    <div class="ex">
+      <div class="ex-title">Personal buffer</div>
+      <div class="ex-body">Anything you send to @LabsHubBot is saved in your buffer. Access it from any device at hub.labs.co/hub/buffer.</div>
+    </div>
+    <div class="ex">
+      <div class="ex-title">Wizard Mini App</div>
+      <div class="ex-body">Answer 15 questions inside Telegram. Hub scaffolds the whole project and seeds a build prompt for Claude to act on.</div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="fi">
+  <span>hub.labs.co/telegram</span>
+  <span>
+    <a href="/">hub.labs.co</a> &nbsp;&middot;&nbsp;
+    <a href="/docs">docs</a> &nbsp;&middot;&nbsp;
+    <a href="https://t.me/LabsHubBot">@LabsHubBot</a>
+  </span>
+</div></footer>
+
+</div>
+</body></html>

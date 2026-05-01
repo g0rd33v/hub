@@ -186,7 +186,7 @@ export function mountSigninRoutes(app, ctx) {
     let tier;
     if (newFmt) {
       const role = newFmt[2];
-      if      (role === 'server')  { tier = 'sap'; }
+      if      (role === 'server')  { tier = 'sap'; token = newFmt[3]; }
       else if (role === 'project') { tier = 'pap'; token = 'pap_' + newFmt[3]; }
       else if (role === 'agent')   { tier = 'aap'; token = 'aap_' + newFmt[3]; }
       else return res.status(404).send('not found');
