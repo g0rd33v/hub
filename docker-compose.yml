@@ -1,0 +1,155 @@
+# Hub v0.4 — Production stack
+# Usage: docker compose up -d
+
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hubdb}
+      POSTGRES_USER: ${POSTGRES_USER:-hubuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - hub-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hubuser} -d ${POSTGRES_DB:-hubdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # ── Hub prod ──────────────────────────────────────────────────
+  hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hub-prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+      HUB_PORT: 3100
+      HUB_DATA_DIR: /var/lib/hub
+      HUB_CONFIG_DIR: /etc/hub
+      HUB_LOG_DIR: /var/log/hub
+      PUBLIC_BASE: https://hub.labs.co
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hubuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hubdb}
+    volumes:
+      - hub_data:/var/lib/hub
+      - hub_config:/etc/hub
+      - hub_logs:/var/log/hub
+    networks:
+      - hub-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+  # ── Hub stage ─────────────────────────────────────────────────
+  hub-stage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hub-stage
+    restart: unless-stopped
+    env_file: .env.stage
+    environment:
+      NODE_ENV: staging
+      HUB_PORT: 3101
+      HUB_DATA_DIR: /var/lib/hub-stage
+      HUB_CONFIG_DIR: /etc/hub
+      HUB_LOG_DIR: /var/log/hub
+      PUBLIC_BASE: https://stage.hub.labs.co
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hubuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hubdb}_stage
+    volumes:
+      - hub_stage_data:/var/lib/hub-stage
+      - hub_config:/etc/hub
+      - hub_logs:/var/log/hub
+    networks:
+      - hub-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # ── Nginx ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: hub-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks:
+      - hub-net
+    depends_on:
+      - hub
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # ── Certbot ───────────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot
+    container_name: hub-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email eugene@labs.vc --agree-tos --no-eff-email -d hub.labs.co -d stage.hub.labs.co
+    profiles:
+      - certbot
+
+  # ── Watchtower ────────────────────────────────────────────────
+  watchtower:
+    image: containrrr/watchtower
+    container_name: hub-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 3600
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+      WATCHTOWER_MONITOR_ONLY: "true"  # only notify, no auto-pull in prod
+    networks:
+      - hub-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+volumes:
+  postgres_data:
+  hub_data:
+  hub_stage_data:
+  hub_config:
+  hub_logs:
+
+networks:
+  hub-net:
+    driver: bridge
