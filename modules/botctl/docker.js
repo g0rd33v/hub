@@ -1,5 +1,10 @@
-// modules/botctl/docker.js — Docker Engine API wrapper via unix socket (v0.5.1)
-// v0.5.1: createContainer accepts extraHosts for host-gateway access
+// modules/botctl/docker.js v0.5.1 — Docker Engine API wrapper via unix socket
+// Direct HTTP-over-socket. Zero deps beyond Node core.
+//
+// v0.5.1: createContainer accepts extraHosts (array of "host:ip" or "host:host-gateway")
+//
+// Docker Engine API: https://docs.docker.com/engine/api/v1.43/
+// Socket: /var/run/docker.sock
 
 import http from 'http';
 
@@ -59,8 +64,7 @@ export async function inspectContainer(id) {
 }
 
 export async function createContainer({
-  name, image, env, memMB, cpuFrac, pidsLimit, binds, labels,
-  extraHosts = [],
+  name, image, env, memMB, cpuFrac, pidsLimit, binds, labels, extraHosts,
   restartPolicy = 'unless-stopped',
 }) {
   const body = {
@@ -76,7 +80,7 @@ export async function createContainer({
       Tmpfs:         { '/tmp': 'rw,noexec,nosuid,size=64m' },
       RestartPolicy: { Name: restartPolicy },
       Binds:         binds || [],
-      ExtraHosts:    extraHosts,
+      ExtraHosts:    extraHosts || [],
       NetworkMode:   'bridge',
       AutoRemove:    false,
       LogConfig:     { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
@@ -91,6 +95,8 @@ export const stopContainer    = (id, timeoutSec = 10) => request('POST',   '/con
 export const restartContainer = (id, timeoutSec = 10) => request('POST',   '/containers/' + id + '/restart?t=' + timeoutSec);
 export const removeContainer  = (id, force = false)   => request('DELETE', '/containers/' + id + '?force=' + (force ? 'true' : 'false'));
 
+// Docker logs are multiplexed when tty=false: 8-byte header per chunk.
+// Header: [stream(1), 0, 0, 0, length_be32(4)]   stream: 1=stdout, 2=stderr
 export async function tailLogs(id, { tail = 100 } = {}) {
   const qs = new URLSearchParams({
     stdout: '1', stderr: '1', tail: String(tail), timestamps: '1',

@@ -1,6 +1,8 @@
 // hub/server.js — Hub v0.5.1 kernel
 // Single entry point. Loads modules in dependency order, mounts routes,
 // starts Express listener.
+//
+// v0.5.1: load `internal` module after botctl (depends on botctl.db.listBots)
 
 import express from 'express';
 import os      from 'os';
@@ -11,12 +13,12 @@ import { STATUS_HTML, STATUS_SLUG }          from './status.js';
 
 const VERSION = '0.5.1';
 
-// Load SAP before anything else.
 loadServerSAP(paths);
 
 const modules = {};
 const ctx = { config, paths, logger, modules };
 
+// ─── Module boot ─────────────────────────────────────────────────────
 async function loadModule(name, importPath) {
   if (!config.modules[name]) {
     logger.info(`module skipped (disabled): ${name}`);
@@ -79,8 +81,7 @@ app.get('/docs/', (req, res) => res.redirect(301, '/docs'));
 app.get('/telegram', (req, res) => res.type('html').send(_TELEGRAM));
 mountSigninRoutes(app, ctx);
 
-app.get('/status/' + STATUS_SLUG, (req, res) =>
-  res.type('html').send(STATUS_HTML));
+app.get('/status/' + STATUS_SLUG, (req, res) => res.type('html').send(STATUS_HTML));
 app.get('/status/' + STATUS_SLUG + '/stage-health', async (req, res) => {
   try {
     const r = await fetch('http://localhost:3101/health', { signal: AbortSignal.timeout(3000) });

@@ -1,108 +1,131 @@
-// modules/internal/index.js — internal-only HTTP endpoints for bot containers.
+// modules/internal/index.js — internal-only endpoints for bot containers
 //
-// Bot containers (running hub-bot-runner) talk back to Hub for KV access.
-// They send Bearer KV_TOKEN where KV_TOKEN = HMAC-SHA256(SAP, '<botId>:<project>').
-// Hub recomputes and timing-safe-compares; if it matches AND the project header
-// matches the project bound to that bot, the call is authorised — strictly
-// scoped to that one project's KV.
+// Each bot container holds a per-bot KV_TOKEN = HMAC-SHA256(SAP, "<bot_id>:<project>").
+// On every KV request the container sends:
+//   Authorization: Bearer <KV_TOKEN>
+//   x-hub-project:  <project>
+// Hub looks up all bots for that project, recomputes the HMAC for each,
+// and accepts the request only if any matches (timing-safe).
 //
-// Endpoints (all under POST /internal/kv/*):
-//   /internal/kv/ping           {ok:true}
-//   /internal/kv/get   {key}    -> {ok, value}
-//   /internal/kv/set   {key, value}
-//   /internal/kv/del   {key}
-//   /internal/kv/list  {prefix?}
+// Endpoints (all POST, all under the same auth):
+//   /internal/kv/ping  body: {}              → {ok:true, project}
+//   /internal/kv/get   body: {key}           → {ok:true, value}   (value=null if missing)
+//   /internal/kv/set   body: {key, value}    → {ok:true}
+//   /internal/kv/del   body: {key}           → {ok:true}
+//
+// KV is delegated to the existing buffer module: ctx.modules.buffer.getKv(project),
+// so containers read/write the same SQLite files Hub itself uses.
 
 import crypto from 'crypto';
-import { getSAP } from '../../hub/credentials.js';
+import fs from 'fs';
 
 let _ctx;
+let _sap = null;
 
 export async function init(ctx) {
   _ctx = ctx;
-  ctx.logger.info('[internal] ready');
+  _sap = fs.readFileSync(ctx.paths.sapToken(), 'utf8').trim();
+  if (!_sap) throw new Error('[internal] SAP token empty');
+  ctx.logger.info('[internal] ready (KV proxy auth via SAP-HMAC)');
 }
 
-function expectedTokenFor(botId, project) {
-  const sap = getSAP();
-  if (!sap) return null;
-  return crypto.createHmac('sha256', sap).update(String(botId) + ':' + String(project)).digest('hex');
+function getBearer(req) {
+  const h = req.headers['authorization'] || '';
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
 }
 
-function safeEqHex(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
-}
-
-// Validate Bearer KV_TOKEN against bot row in DB.
-// On success returns { botId, project }. On failure returns null.
-async function authBot(req) {
-  if (!_ctx.modules.botctl) return null;
-  const auth = req.headers['authorization'] || '';
-  const m = auth.match(/^Bearer\s+([0-9a-f]{64})$/i);
-  if (!m) return null;
-  const got = m[1].toLowerCase();
-  const project = req.headers['x-hub-project'];
-  if (!project) return null;
-
-  const bot = await _ctx.modules.botctl.db.getBotByUsername(/* fallback below */ '___nope___').catch(() => null);
-  // Token is bound to (botId, project). We look up by project to get botId.
-  // Faster path: query all bots with this project, find one whose HMAC matches.
-  const candidates = await _ctx.modules.botctl.db.listBots({ project }).catch(() => []);
-  for (const b of candidates) {
-    const expected = expectedTokenFor(b.id, b.project_name || project);
-    if (expected && safeEqHex(got, expected)) {
-      return { botId: b.id, project: b.project_name || project };
+async function validateToken(token, project) {
+  const botctl = _ctx.modules?.botctl;
+  if (!botctl) return null;
+  const bots = await botctl.db.listBots({ project });
+  if (!bots.length) return null;
+  for (const bot of bots) {
+    const expected = crypto
+      .createHmac('sha256', _sap)
+      .update(bot.id + ':' + project)
+      .digest('hex');
+    if (
+      token.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected))
+    ) {
+      return bot;
     }
   }
   return null;
 }
 
 export function mountRoutes(app, ctx) {
-  // Bind only to internal routes — no SAP, but HMAC-bound token + project header.
-  app.post('/internal/kv/ping', async (req, res) => {
-    const auth = await authBot(req);
-    if (!auth) return res.status(401).json({ ok: false, error: 'unauthorized' });
-    res.json({ ok: true, project: auth.project, bot_id: auth.botId });
+  const auth = async (req, res, next) => {
+    try {
+      const project = req.headers['x-hub-project'];
+      if (!project || typeof project !== 'string') {
+        return res.status(401).json({ ok: false, error: 'x-hub-project header required' });
+      }
+      const token = getBearer(req);
+      if (!token) {
+        return res.status(401).json({ ok: false, error: 'bearer token required' });
+      }
+      const bot = await validateToken(token, project);
+      if (!bot) {
+        return res.status(401).json({ ok: false, error: 'invalid token for project' });
+      }
+      req.bot = bot;
+      req.project = project;
+      next();
+    } catch (e) {
+      ctx.logger.error('[internal] auth error: ' + e.message);
+      res.status(500).json({ ok: false, error: 'auth check failed' });
+    }
+  };
+
+  app.post('/internal/kv/ping', auth, (req, res) => {
+    res.json({ ok: true, project: req.project, bot_id: req.bot.id });
   });
 
-  app.post('/internal/kv/get', async (req, res) => {
+  app.post('/internal/kv/get', auth, async (req, res) => {
     try {
-      const auth = await authBot(req);
-      if (!auth) return res.status(401).json({ ok: false, error: 'unauthorized' });
       const { key } = req.body || {};
-      if (typeof key !== 'string' || !key) return res.status(400).json({ ok: false, error: 'bad_key' });
-      const kv = ctx.modules.buffer.getKv(auth.project);
-      const value = kv.get(key);
-      res.json({ ok: true, value: value ?? null });
+      if (!key || typeof key !== 'string') {
+        return res.status(400).json({ ok: false, error: 'key required' });
+      }
+      const kv = ctx.modules.buffer?.getKv?.(req.project);
+      if (!kv) return res.status(500).json({ ok: false, error: 'buffer kv unavailable' });
+      const value = await Promise.resolve(kv.get(key));
+      res.json({ ok: true, value: value === undefined ? null : value });
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message });
     }
   });
 
-  app.post('/internal/kv/set', async (req, res) => {
+  app.post('/internal/kv/set', auth, async (req, res) => {
     try {
-      const auth = await authBot(req);
-      if (!auth) return res.status(401).json({ ok: false, error: 'unauthorized' });
       const { key, value } = req.body || {};
-      if (typeof key !== 'string' || !key) return res.status(400).json({ ok: false, error: 'bad_key' });
-      const kv = ctx.modules.buffer.getKv(auth.project);
-      kv.set(key, value);
+      if (!key || typeof key !== 'string') {
+        return res.status(400).json({ ok: false, error: 'key required' });
+      }
+      const kv = ctx.modules.buffer?.getKv?.(req.project);
+      if (!kv) return res.status(500).json({ ok: false, error: 'buffer kv unavailable' });
+      await Promise.resolve(kv.set(key, value));
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message });
     }
   });
 
-  app.post('/internal/kv/del', async (req, res) => {
+  app.post('/internal/kv/del', auth, async (req, res) => {
     try {
-      const auth = await authBot(req);
-      if (!auth) return res.status(401).json({ ok: false, error: 'unauthorized' });
       const { key } = req.body || {};
-      if (typeof key !== 'string' || !key) return res.status(400).json({ ok: false, error: 'bad_key' });
-      const kv = ctx.modules.buffer.getKv(auth.project);
-      kv.del?.(key);
+      if (!key || typeof key !== 'string') {
+        return res.status(400).json({ ok: false, error: 'key required' });
+      }
+      const kv = ctx.modules.buffer?.getKv?.(req.project);
+      if (!kv) return res.status(500).json({ ok: false, error: 'buffer kv unavailable' });
+      const deleter = kv.delete || kv.del;
+      if (typeof deleter !== 'function') {
+        return res.status(500).json({ ok: false, error: 'kv has no delete method' });
+      }
+      await Promise.resolve(deleter.call(kv, key));
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message });

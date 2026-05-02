@@ -1,35 +1,45 @@
-// modules/botctl/lifecycle.js — high-level bot operations (v0.5.1)
-// Coordinates DB + Docker. Resource limits come from DB, never from caller.
+// modules/botctl/lifecycle.js v0.5.1 — high-level bot operations
+// Coordinates DB + Docker. Always validates botId against DB first.
+// Resource limits come from DB, NOT from the caller (user can't grant themselves CPU).
 //
-// v0.5.1: spawns containers with Hub-compatible runner ABI:
-//   - injects PROJECT, HUB_URL, KV_TOKEN env vars
-//   - mounts /var/lib/hub/projects/<project>/live -> /app/user:ro for full Hub-compat
-//   - adds host-gateway entry so containers can reach the host (where Hub runs)
+// v0.5.1 changes:
+//   - Mounts the project's live/ dir as /app/user:ro (was /var/lib/hub/bots/<username>)
+//     so existing project bot.js + cron.json + assets work unmodified.
+//   - Injects PROJECT, HUB_URL, KV_TOKEN env vars for runner v0.6's KV proxy.
+//   - KV_TOKEN = HMAC-SHA256(SAP, "<bot_id>:<project>"); validated by /internal/kv/* in Hub.
+//   - Adds host.docker.internal:host-gateway ExtraHost so container can reach Hub.
 
 import crypto from 'crypto';
+import fs from 'fs';
 import * as docker from './docker.js';
 import * as db from './db.js';
-import { getSAP } from '../../hub/credentials.js';
 
 const NAME_PREFIX = 'hub-bot-';
 const LABEL_KEY = 'hub.managed';
-const HUB_URL_FROM_CONTAINER = process.env.HUB_INTERNAL_URL || 'http://host.docker.internal:3100';
+
+let _sap = null;
+function getSap() {
+  if (_sap) return _sap;
+  _sap = fs.readFileSync('/etc/hub/sap.token', 'utf8').trim();
+  if (!_sap) throw new Error('SAP token empty at /etc/hub/sap.token');
+  return _sap;
+}
+
+function makeKvToken(botId, project) {
+  return crypto.createHmac('sha256', getSap()).update(botId + ':' + project).digest('hex');
+}
 
 function containerName(bot) {
   return NAME_PREFIX + bot.id + '-' + bot.bot_username;
-}
-
-function kvTokenFor(botId, project) {
-  const sap = getSAP();
-  if (!sap) throw new Error('SAP not loaded — cannot mint KV_TOKEN');
-  return crypto.createHmac('sha256', sap).update(String(botId) + ':' + String(project)).digest('hex');
 }
 
 export async function spawn(botId) {
   const bot = await db.getBot(botId);
   if (!bot) throw new Error('spawn: bot ' + botId + ' not found');
   if (bot.status === 'running') throw new Error('spawn: bot ' + botId + ' already running');
-  if (!bot.project_name) throw new Error('spawn: bot ' + botId + ' has no project_name (required for KV scope)');
+  if (!bot.project_name) {
+    throw new Error('spawn: bot ' + botId + ' has no project_name (required since v0.5.1 — bot must belong to a project)');
+  }
 
   // Cleanup: if a container with this name exists from a previous attempt, remove it
   const name = containerName(bot);
@@ -40,8 +50,15 @@ export async function spawn(botId) {
     }
   }
 
+  // Mount the project's live/ dir so existing user code (bot.js, cron.json, assets) works
   const userMountHost = '/var/lib/hub/projects/' + bot.project_name + '/live';
-  const kvToken = kvTokenFor(bot.id, bot.project_name);
+  if (!fs.existsSync(userMountHost)) {
+    throw new Error('spawn: project live dir does not exist: ' + userMountHost);
+  }
+
+  // KV_TOKEN scoped to this bot+project; validated by Hub /internal/kv/*
+  const kvToken = makeKvToken(bot.id, bot.project_name);
+  const hubUrl  = process.env.HUB_URL_FROM_CONTAINER || 'http://host.docker.internal:3100';
 
   const created = await docker.createContainer({
     name,
@@ -49,7 +66,7 @@ export async function spawn(botId) {
     env: [
       'BOT_TOKEN=' + bot.bot_token,
       'PROJECT=' + bot.project_name,
-      'HUB_URL=' + HUB_URL_FROM_CONTAINER,
+      'HUB_URL=' + hubUrl,
       'KV_TOKEN=' + kvToken,
     ],
     memMB:     bot.mem_limit_mb,
@@ -61,7 +78,7 @@ export async function spawn(botId) {
       'hub.managed':      'true',
       'hub.bot.id':       String(bot.id),
       'hub.bot.username': bot.bot_username,
-      'hub.bot.project':  bot.project_name,
+      'hub.project':      bot.project_name,
     },
   });
 
@@ -147,6 +164,6 @@ export async function listManagedContainers() {
       status:       c.Status,
       bot_id:       c.Labels['hub.bot.id'],
       bot_username: c.Labels['hub.bot.username'],
-      project:      c.Labels['hub.bot.project'],
+      project:      c.Labels['hub.project'] || null,
     }));
 }
