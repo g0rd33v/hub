@@ -21,13 +21,6 @@ const modules = {};
 const ctx = { config, paths, logger, modules };
 
 // ─── Module boot ─────────────────────────────────────────────────────
-// Load order matters: buffer first (state), then runtime (sandbox),
-// then drafts (uses both), then telegram (uses drafts state),
-// then analytics (uses drafts state).
-//
-// Each module loads with try/catch — a single broken module degrades
-// gracefully instead of crashing the entire server.
-
 async function loadModule(name, importPath) {
   if (!config.modules[name]) {
     logger.info(`module skipped (disabled): ${name}`);
@@ -50,6 +43,7 @@ await loadModule('drafts',    '../modules/drafts/index.js');
 await loadModule('telegram',  '../modules/telegram/index.js');
 await loadModule('analytics', '../modules/analytics/index.js');
 await loadModule('wizard',    '../modules/wizard/index.js');
+await loadModule('botctl',    '../modules/botctl/index.js');
 
 // ─── Express app ─────────────────────────────────────────────────────
 const app = express();
@@ -57,7 +51,6 @@ app.set('trust proxy', 1);                    // behind nginx
 app.use(express.json({ limit: '1mb' }));      // reduced from 10mb (DoS hardening)
 
 // ─── Request logging middleware ────────────────────────────────────────
-// Only logs 4xx/5xx or slow (>1s) requests to keep noise down.
 app.use((req, res, next) => {
   req.id = Math.random().toString(36).slice(2, 10);
   const t0 = Date.now();
@@ -92,7 +85,6 @@ app.get('/', (req, res) => res.type('html').send(_LANDING));
 app.get('/docs', (req, res) => res.type('html').send(_DOCS));
 app.get('/docs/', (req, res) => res.redirect(301, '/docs'));
 app.get('/telegram', (req, res) => res.type('html').send(_TELEGRAM));
-// Signin — kernel owns the URL, delegates rendering to drafts module.
 mountSigninRoutes(app, ctx);
 
 // ─── Secret status page ──────────────────────────────────────────────
@@ -168,7 +160,6 @@ function shutdown(sig) {
     logger.info('http server closed');
     setTimeout(() => process.exit(0), 500);
   });
-  // Hard kill if not done in 10s
   setTimeout(() => {
     logger.error('forced exit after 10s timeout');
     process.exit(1);

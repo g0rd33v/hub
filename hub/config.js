@@ -16,6 +16,7 @@ export const config = {
     telegram: true,
     analytics: true,
     wizard: true,
+    botctl: true,
   },
 };
 

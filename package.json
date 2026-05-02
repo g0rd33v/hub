@@ -1,6 +1,6 @@
 {
   "name": "hub",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "description": "Hub — protocol-level routing conductor for intelligence, communication, and computation.",
   "type": "module",
   "main": "hub/server.js",
@@ -20,6 +20,7 @@
     "better-sqlite3": "^12.9.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.0",
+    "pg": "^8.13.0",
     "simple-git": "^3.25.0"
   }
 }
