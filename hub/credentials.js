@@ -1,28 +1,35 @@
-// hub/credentials.js — SAP/PAP/AAP token management
-// Lifted and reorganised from drafts/drafts.js.
-// Token formats are unchanged for backwards compatibility with existing passes.
+// hub/credentials.js — SAP/PAP/AAP token management v0.5.0
 //
 // Tiers:
-//   SAP  server root       — 16 hex chars, stored in /etc/hub/sap.token
-//   PAP  project owner     — "pap_" + 12 hex chars, minted per project
-//   AAP  agent contributor — "aap_" + 10 hex chars, minted per agent
+//   SAP  server root       — 16 byte hex (128 bits), stored in /etc/hub/sap.token
+//   PAP  project owner     — "pap_" + 16 byte hex, minted per project
+//   AAP  agent contributor — "aap_" + 16 byte hex, minted per agent
 //
 // URL scheme:
 //   /signin/pass_<serverNum>_server_<sapHex>     → SAP welcome
 //   /signin/pass_<serverNum>_project_<papHex>    → PAP welcome
 //   /signin/pass_<serverNum>_agent_<aapHex>      → AAP welcome
+//
+// v0.5 security changes:
+//   • timingSafeEqual via safeEq() for SAP comparison
+//   • All tier tokens bumped to 16 bytes (128 bits) — was 8/6/5
+//   • SAP no longer printed to stdout / log files (TTY-only display)
+//   • Periodic TTL cleanup of rate-limit Map (prevents memory leak)
+//   • Proper ESM imports (removed CJS require() call)
 
-import fs   from 'fs';
+import fs     from 'fs';
+import path   from 'path';
 import crypto from 'crypto';
 
-const TIER_BYTES = { sap: 8, pap: 6, aap: 5 };
+// 16 bytes = 128 bits entropy for ALL tiers (was 8/6/5 — too weak)
+const TIER_BYTES = { sap: 16, pap: 16, aap: 16 };
 
 export const newToken = (prefix) =>
-  prefix + '_' + crypto.randomBytes(TIER_BYTES[prefix] || 6).toString('hex');
+  prefix + '_' + crypto.randomBytes(TIER_BYTES[prefix] || 16).toString('hex');
 
-export const newId = () => crypto.randomBytes(4).toString('hex');
+export const newId = () => crypto.randomBytes(8).toString('hex');
 
-// ─── Rate limits ────────────────────────────────────────────────────────────
+// ─── Rate limits ─────────────────────────────────────────────────────────────
 const RATE = {
   sap: { perMinute: 120, perHour: 2000,  perDay: 20000 },
   pap: { perMinute: 60,  perHour: 600,   perDay: 5000  },
@@ -30,14 +37,36 @@ const RATE = {
 };
 const hits = new Map();
 
+// Periodic cleanup — prevents unbounded memory growth.
+// Runs every 10 minutes, drops entries with no hits in last 24h.
+// .unref() so it doesn't keep the process alive on shutdown.
+setInterval(() => {
+  const now = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  let removed = 0;
+  for (const [key, arr] of hits.entries()) {
+    const pruned = arr.filter(t => now - t < DAY_MS);
+    if (pruned.length === 0) {
+      hits.delete(key);
+      removed++;
+    } else if (pruned.length !== arr.length) {
+      hits.set(key, pruned);
+    }
+  }
+  if (removed > 0) {
+    // Use require'd console only via the central logger pattern is overkill
+    // for this internal cleanup task; but avoid noise unless something happens.
+  }
+}, 10 * 60 * 1000).unref();
+
 export function checkRate(tier, tokenId) {
   const limits = RATE[tier];
   if (!limits) return { ok: true };
   const nowMs = Date.now();
   const windows = [
-    { bucket: 'm', ms: 60 * 1000,       max: limits.perMinute },
-    { bucket: 'h', ms: 60 * 60 * 1000,  max: limits.perHour   },
-    { bucket: 'd', ms: 24 * 60 * 60 * 1000, max: limits.perDay },
+    { bucket: 'm', ms: 60 * 1000,           max: limits.perMinute },
+    { bucket: 'h', ms: 60 * 60 * 1000,      max: limits.perHour   },
+    { bucket: 'd', ms: 24 * 60 * 60 * 1000, max: limits.perDay    },
   ];
   for (const w of windows) {
     const key  = `${tier}:${tokenId}:${w.bucket}`;
@@ -51,6 +80,19 @@ export function checkRate(tier, tokenId) {
     hits.set(key, pruned);
   }
   return { ok: true };
+}
+
+// ─── Timing-safe token comparison ───────────────────────────────────────────
+export function safeEq(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const A = Buffer.from(a, 'utf8');
+  const B = Buffer.from(b, 'utf8');
+  if (A.length !== B.length) {
+    // Still do a comparison to avoid leaking length info via timing
+    crypto.timingSafeEqual(A, A);
+    return false;
+  }
+  return crypto.timingSafeEqual(A, B);
 }
 
 // ─── SAP loader ─────────────────────────────────────────────────────────────
@@ -68,64 +110,63 @@ export function loadServerSAP(paths) {
     return _sap;
   }
 
-  // 3. Mint new SAP
-  _sap = crypto.randomBytes(8).toString('hex');
+  // 3. Mint new SAP — 16 bytes (128 bits)
+  // SECURITY: never write the SAP token to console/logs.
+  // Show on TTY only when actually attached to a terminal.
+  _sap = crypto.randomBytes(16).toString('hex');
   try {
-    fs.mkdirSync(require('path').dirname(sapFile), { recursive: true });
+    fs.mkdirSync(path.dirname(sapFile), { recursive: true });
     fs.writeFileSync(sapFile, _sap + '\n', { mode: 0o600 });
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  hub: NEW SAP MINTED — SAVE THIS, ONLY SHOWN ONCE');
-    console.log('  SAP token: ' + _sap);
-    console.log('  Saved to: ' + sapFile + ' (mode 0600)');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (process.stdout.isTTY) {
+      process.stdout.write('\n');
+      process.stdout.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+');
+      process.stdout.write('  hub: NEW SAP MINTED — saved to ' + sapFile + '\n');
+      process.stdout.write('  Read it with:  sudo cat ' + sapFile + '\n');
+      process.stdout.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    }
   } catch (e) {
-    console.log('SAP minted (NOT persisted, save now): ' + _sap + ' — error: ' + e.message);
+    // Even on persistence error, do NOT print the SAP value
+    console.error('SAP minted but persistence failed:', e.message);
+    console.error('SAP file path:', sapFile);
+    console.error('Server will work in this session only — check directory permissions.');
   }
   return _sap;
 }
 
 export function getSAP() { return _sap; }
 
-// ─── Token helpers ──────────────────────────────────────────────────────────
+// ─── Token helpers ───────────────────────────────────────────────────────────────
 export function parseBearer(req) {
   const h = req.headers['authorization'] || '';
   const m = h.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : null;
 }
 
-// ─── Middleware factories ────────────────────────────────────────────────────
-// These need access to state (projects) — state is passed in via ctx at
-// mountSigninRoutes time, not imported (avoids circular dep).
-
+// ─── Middleware factories ────────────────────────────────────────────────────────
 export function makeAuthMiddleware(ctx) {
-  const { modules } = ctx;
-
   function findProjectByPAP(token) {
-    return ctx.modules.drafts
-      ? ctx.modules.drafts.findProjectByPAP(token)
-      : null;
+    return ctx.modules.drafts ? ctx.modules.drafts.findProjectByPAP(token) : null;
   }
   function findProjectAndAAPByAAPToken(token) {
-    return ctx.modules.drafts
-      ? ctx.modules.drafts.findProjectAndAAPByAAPToken(token)
-      : null;
+    return ctx.modules.drafts ? ctx.modules.drafts.findProjectAndAAPByAAPToken(token) : null;
   }
-
-  function rateLimitGuard(tier, id, res, next) {
-    const rl = checkRate(tier, id);
-    if (!rl.ok) {
-      res.set('Retry-After', rl.retryAfter);
-      return res.status(429).json({ ok: false, error: 'rate_limited', window: rl.window, retry_after: rl.retryAfter });
-    }
-    return next();
+  function rateLimitDeny(rl, res) {
+    res.set('Retry-After', rl.retryAfter);
+    return res.status(429).json({
+      ok: false, error: 'rate_limited',
+      window: rl.window, retry_after: rl.retryAfter,
+    });
   }
 
   return {
     authSAP(req, res, next) {
       const tok = parseBearer(req);
-      if (!tok || tok !== getSAP()) return res.status(401).json({ ok: false, error: 'unauthorized' });
+      if (!tok || !safeEq(tok, getSAP())) {
+        return res.status(401).json({ ok: false, error: 'unauthorized' });
+      }
       const rl = checkRate('sap', 'root');
-      if (!rl.ok) { res.set('Retry-After', rl.retryAfter); return res.status(429).json({ ok: false, error: 'rate_limited', window: rl.window, retry_after: rl.retryAfter }); }
+      if (!rl.ok) return rateLimitDeny(rl, res);
       req.tier = 'sap';
       return next();
     },
@@ -133,12 +174,13 @@ export function makeAuthMiddleware(ctx) {
     authPAPorSAP(req, res, next) {
       const tok = parseBearer(req);
       if (!tok) return res.status(401).json({ ok: false, error: 'unauthorized' });
-      if (tok === getSAP()) { req.tier = 'sap'; return next(); }
+      if (safeEq(tok, getSAP())) { req.tier = 'sap'; return next(); }
       const p = findProjectByPAP(tok);
       if (p) {
         const rl = checkRate('pap', p.pap.id);
-        if (!rl.ok) { res.set('Retry-After', rl.retryAfter); return res.status(429).json({ ok: false, error: 'rate_limited', window: rl.window, retry_after: rl.retryAfter }); }
-        req.tier = 'pap'; req.project = p; return next();
+        if (!rl.ok) return rateLimitDeny(rl, res);
+        req.tier = 'pap'; req.project = p;
+        return next();
       }
       return res.status(401).json({ ok: false, error: 'unauthorized' });
     },
@@ -146,27 +188,27 @@ export function makeAuthMiddleware(ctx) {
     authAny(req, res, next) {
       const tok = parseBearer(req);
       if (!tok) return res.status(401).json({ ok: false, error: 'unauthorized' });
-      if (tok === getSAP()) { req.tier = 'sap'; return next(); }
+      if (safeEq(tok, getSAP())) { req.tier = 'sap'; return next(); }
       const p = findProjectByPAP(tok);
       if (p) {
         const rl = checkRate('pap', p.pap.id);
-        if (!rl.ok) { res.set('Retry-After', rl.retryAfter); return res.status(429).json({ ok: false, error: 'rate_limited', window: rl.window, retry_after: rl.retryAfter }); }
-        req.tier = 'pap'; req.project = p; return next();
+        if (!rl.ok) return rateLimitDeny(rl, res);
+        req.tier = 'pap'; req.project = p;
+        return next();
       }
       const aapHit = findProjectAndAAPByAAPToken(tok);
       if (aapHit) {
         const rl = checkRate('aap', aapHit.aap.id);
-        if (!rl.ok) { res.set('Retry-After', rl.retryAfter); return res.status(429).json({ ok: false, error: 'rate_limited', window: rl.window, retry_after: rl.retryAfter }); }
-        req.tier = 'aap'; req.project = aapHit.project; req.aap = aapHit.aap; return next();
+        if (!rl.ok) return rateLimitDeny(rl, res);
+        req.tier = 'aap'; req.project = aapHit.project; req.aap = aapHit.aap;
+        return next();
       }
       return res.status(401).json({ ok: false, error: 'unauthorized' });
     },
   };
 }
 
-// ─── /signin route ──────────────────────────────────────────────────────────
-// Mounted by server.js before modules so it works regardless of module state.
-
+// ─── /signin route ──────────────────────────────────────────────────────────────
 export function mountSigninRoutes(app, ctx) {
   app.get('/signin/:token', async (req, res) => {
     let token = req.params.token || '';
@@ -176,7 +218,7 @@ export function mountSigninRoutes(app, ctx) {
     if (portable) {
       const tierWord = portable[1].toLowerCase();
       const secret   = portable[3];
-      if (tierWord === 'server')  token = secret;
+      if      (tierWord === 'server')  token = secret;
       else if (tierWord === 'project') token = 'pap_' + secret;
       else if (tierWord === 'agent')   token = 'aap_' + secret;
     }
@@ -195,13 +237,14 @@ export function mountSigninRoutes(app, ctx) {
     else if (/^[0-9a-f]{12,64}$/i.test(token)) tier = 'sap';
     else return res.status(404).send('not found');
 
-    // Delegate rendering to drafts module (it owns state + renderPage)
     if (!ctx.modules.drafts) return res.status(503).send('drafts module not loaded');
     return ctx.modules.drafts.handleSignin(req, res, { tier, token });
   });
 
   // Legacy short links — expired notice
   app.get('/m/:token', (req, res) =>
-    res.status(410).type('html').send('<h1>This link has expired</h1><p>Hub was upgraded. Ask the server owner for a fresh link.</p>')
+    res.status(410).type('html').send(
+      '<h1>This link has expired</h1><p>Hub was upgraded. Ask the server owner for a fresh link.</p>'
+    )
   );
 }
