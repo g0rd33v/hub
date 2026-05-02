@@ -5,17 +5,12 @@
 //   PAP  project owner     — "pap_" + 16 byte hex, minted per project
 //   AAP  agent contributor — "aap_" + 16 byte hex, minted per agent
 //
-// URL scheme:
-//   /signin/pass_<serverNum>_server_<sapHex>     → SAP welcome
-//   /signin/pass_<serverNum>_project_<papHex>    → PAP welcome
-//   /signin/pass_<serverNum>_agent_<aapHex>      → AAP welcome
-//
 // v0.5 security changes:
-//   • timingSafeEqual via safeEq() for SAP comparison
-//   • All tier tokens bumped to 16 bytes (128 bits) — was 8/6/5
-//   • SAP no longer printed to stdout / log files (TTY-only display)
-//   • Periodic TTL cleanup of rate-limit Map (prevents memory leak)
-//   • Proper ESM imports (removed CJS require() call)
+//   - timingSafeEqual via safeEq() for SAP comparison
+//   - All tier tokens bumped to 16 bytes (128 bits) — was 8/6/5
+//   - SAP no longer printed to stdout / log files (TTY-only display)
+//   - Periodic TTL cleanup of rate-limit Map (prevents memory leak)
+//   - Proper ESM imports (removed CJS require() call)
 
 import fs     from 'fs';
 import path   from 'path';
@@ -29,7 +24,7 @@ export const newToken = (prefix) =>
 
 export const newId = () => crypto.randomBytes(8).toString('hex');
 
-// ─── Rate limits ─────────────────────────────────────────────────────────────
+// Rate limits
 const RATE = {
   sap: { perMinute: 120, perHour: 2000,  perDay: 20000 },
   pap: { perMinute: 60,  perHour: 600,   perDay: 5000  },
@@ -43,19 +38,10 @@ const hits = new Map();
 setInterval(() => {
   const now = Date.now();
   const DAY_MS = 24 * 60 * 60 * 1000;
-  let removed = 0;
   for (const [key, arr] of hits.entries()) {
     const pruned = arr.filter(t => now - t < DAY_MS);
-    if (pruned.length === 0) {
-      hits.delete(key);
-      removed++;
-    } else if (pruned.length !== arr.length) {
-      hits.set(key, pruned);
-    }
-  }
-  if (removed > 0) {
-    // Use require'd console only via the central logger pattern is overkill
-    // for this internal cleanup task; but avoid noise unless something happens.
+    if (pruned.length === 0) hits.delete(key);
+    else if (pruned.length !== arr.length) hits.set(key, pruned);
   }
 }, 10 * 60 * 1000).unref();
 
@@ -69,7 +55,7 @@ export function checkRate(tier, tokenId) {
     { bucket: 'd', ms: 24 * 60 * 60 * 1000, max: limits.perDay    },
   ];
   for (const w of windows) {
-    const key  = `${tier}:${tokenId}:${w.bucket}`;
+    const key  = tier + ':' + tokenId + ':' + w.bucket;
     const arr  = hits.get(key) || [];
     const pruned = arr.filter(t => nowMs - t < w.ms);
     if (pruned.length >= w.max) {
@@ -82,7 +68,7 @@ export function checkRate(tier, tokenId) {
   return { ok: true };
 }
 
-// ─── Timing-safe token comparison ───────────────────────────────────────────
+// Timing-safe token comparison
 export function safeEq(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
   const A = Buffer.from(a, 'utf8');
@@ -95,35 +81,32 @@ export function safeEq(a, b) {
   return crypto.timingSafeEqual(A, B);
 }
 
-// ─── SAP loader ─────────────────────────────────────────────────────────────
+// SAP loader
 let _sap = null;
 
 export function loadServerSAP(paths) {
-  // 1. env vars (legacy names kept for backwards compat)
   if (process.env.BEARER_TOKEN) { _sap = process.env.BEARER_TOKEN.trim(); return _sap; }
   if (process.env.SAP_TOKEN)    { _sap = process.env.SAP_TOKEN.trim();    return _sap; }
 
-  // 2. /etc/hub/sap.token
   const sapFile = paths.sapToken();
   if (fs.existsSync(sapFile)) {
     _sap = fs.readFileSync(sapFile, 'utf8').trim();
     return _sap;
   }
 
-  // 3. Mint new SAP — 16 bytes (128 bits)
+  // Mint new SAP — 16 bytes (128 bits)
   // SECURITY: never write the SAP token to console/logs.
-  // Show on TTY only when actually attached to a terminal.
+  // Show notice on TTY only when actually attached to a terminal.
   _sap = crypto.randomBytes(16).toString('hex');
   try {
     fs.mkdirSync(path.dirname(sapFile), { recursive: true });
     fs.writeFileSync(sapFile, _sap + '\n', { mode: 0o600 });
     if (process.stdout.isTTY) {
-      process.stdout.write('\n');
-      process.stdout.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-');
+      const bar = '-'.repeat(56);
+      process.stdout.write('\n' + bar + '\n');
       process.stdout.write('  hub: NEW SAP MINTED — saved to ' + sapFile + '\n');
       process.stdout.write('  Read it with:  sudo cat ' + sapFile + '\n');
-      process.stdout.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      process.stdout.write(bar + '\n');
     }
   } catch (e) {
     // Even on persistence error, do NOT print the SAP value
@@ -136,14 +119,13 @@ export function loadServerSAP(paths) {
 
 export function getSAP() { return _sap; }
 
-// ─── Token helpers ───────────────────────────────────────────────────────────────
 export function parseBearer(req) {
   const h = req.headers['authorization'] || '';
   const m = h.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : null;
 }
 
-// ─── Middleware factories ────────────────────────────────────────────────────────
+// Middleware factories
 export function makeAuthMiddleware(ctx) {
   function findProjectByPAP(token) {
     return ctx.modules.drafts ? ctx.modules.drafts.findProjectByPAP(token) : null;
@@ -208,7 +190,7 @@ export function makeAuthMiddleware(ctx) {
   };
 }
 
-// ─── /signin route ──────────────────────────────────────────────────────────────
+// /signin route
 export function mountSigninRoutes(app, ctx) {
   app.get('/signin/:token', async (req, res) => {
     let token = req.params.token || '';
