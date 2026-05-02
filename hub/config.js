@@ -17,6 +17,7 @@ export const config = {
     analytics: true,
     wizard: true,
     botctl: true,
+    internal: true,
   },
 };
 

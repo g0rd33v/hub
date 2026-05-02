@@ -1,9 +1,6 @@
-// hub/server.js — Hub v0.5.0 kernel
+// hub/server.js — Hub v0.5.1 kernel
 // Single entry point. Loads modules in dependency order, mounts routes,
 // starts Express listener.
-//
-// Architecture principle: this file stays small and dumb about content.
-// Everything interesting lives in modules/.
 
 import express from 'express';
 import os      from 'os';
@@ -12,7 +9,7 @@ import { logger }        from './logger.js';
 import { loadServerSAP, mountSigninRoutes } from './credentials.js';
 import { STATUS_HTML, STATUS_SLUG }          from './status.js';
 
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 
 // Load SAP before anything else.
 loadServerSAP(paths);
@@ -20,7 +17,6 @@ loadServerSAP(paths);
 const modules = {};
 const ctx = { config, paths, logger, modules };
 
-// ─── Module boot ─────────────────────────────────────────────────────
 async function loadModule(name, importPath) {
   if (!config.modules[name]) {
     logger.info(`module skipped (disabled): ${name}`);
@@ -44,13 +40,12 @@ await loadModule('telegram',  '../modules/telegram/index.js');
 await loadModule('analytics', '../modules/analytics/index.js');
 await loadModule('wizard',    '../modules/wizard/index.js');
 await loadModule('botctl',    '../modules/botctl/index.js');
+await loadModule('internal',  '../modules/internal/index.js');
 
-// ─── Express app ─────────────────────────────────────────────────────
 const app = express();
-app.set('trust proxy', 1);                    // behind nginx
-app.use(express.json({ limit: '1mb' }));      // reduced from 10mb (DoS hardening)
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '1mb' }));
 
-// ─── Request logging middleware ────────────────────────────────────────
 app.use((req, res, next) => {
   req.id = Math.random().toString(36).slice(2, 10);
   const t0 = Date.now();
@@ -63,7 +58,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health — kernel-level, always responds regardless of module state.
 app.get('/health', (req, res) => res.json({
   ok:            true,
   version:       VERSION,
@@ -72,8 +66,6 @@ app.get('/health', (req, res) => res.json({
   uptime_sec:    Math.floor(process.uptime()),
 }));
 
-
-// Public pages
 import { readFileSync as _rfs } from 'fs';
 import { fileURLToPath as _fup } from 'url';
 import { dirname as _dn, join as _jn } from 'path';
@@ -87,7 +79,6 @@ app.get('/docs/', (req, res) => res.redirect(301, '/docs'));
 app.get('/telegram', (req, res) => res.type('html').send(_TELEGRAM));
 mountSigninRoutes(app, ctx);
 
-// ─── Secret status page ──────────────────────────────────────────────
 app.get('/status/' + STATUS_SLUG, (req, res) =>
   res.type('html').send(STATUS_HTML));
 app.get('/status/' + STATUS_SLUG + '/stage-health', async (req, res) => {
@@ -125,7 +116,6 @@ app.get('/status/' + STATUS_SLUG + '/infra', async (req, res) => {
   });
 });
 
-// Module routes.
 for (const [name, mod] of Object.entries(modules)) {
   if (typeof mod.mountRoutes === 'function') {
     try {
@@ -137,12 +127,10 @@ for (const [name, mod] of Object.entries(modules)) {
   }
 }
 
-// Drafts project middleware — must come last (catch-all for /<project>/*).
 if (modules.drafts && typeof modules.drafts.mountProjectMiddleware === 'function') {
   modules.drafts.mountProjectMiddleware(app, ctx);
 }
 
-// ─── Start ──────────────────────────────────────────────────────────────
 const server = app.listen(config.port, '0.0.0.0', () => {
   logger.info(`Hub v${VERSION} on 0.0.0.0:${config.port}`);
   logger.info(`public_base: ${config.publicBase}`);
@@ -150,7 +138,6 @@ const server = app.listen(config.port, '0.0.0.0', () => {
   logger.info(`modules: ${Object.keys(modules).join(', ')}`);
 });
 
-// ─── Graceful shutdown ────────────────────────────────────────────────
 let shuttingDown = false;
 function shutdown(sig) {
   if (shuttingDown) return;

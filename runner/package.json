@@ -1,7 +1,7 @@
 {
   "name": "hub-bot-runner",
-  "version": "0.5.0",
-  "description": "Minimal isolated container runtime for a single Telegram bot in Hub",
+  "version": "0.5.1",
+  "description": "Isolated container runtime for a single Telegram bot in Hub. Hub-compatible ABI for KV, send, cron.",
   "type": "module",
   "main": "runner.js",
   "private": true,
