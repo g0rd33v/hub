@@ -1,0 +1,12 @@
+{
+  "name": "hub-bot-runner",
+  "version": "0.5.0",
+  "description": "Minimal isolated container runtime for a single Telegram bot in Hub",
+  "type": "module",
+  "main": "runner.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
